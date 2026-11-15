@@ -10,6 +10,10 @@ const env = (name, fallback) => {
 };
 
 export const config = {
+  port: Number(env('PORT', '5000')),
+  clientOrigin: env('CLIENT_ORIGIN', 'http://localhost:5173'), // the React dev server
+  maxUploadMb: Number(env('MAX_UPLOAD_MB', '50')),
+
   mongoUri: env('MONGODB_URI', ''),
   dbName: env('MONGODB_DB', 'documind'),
 

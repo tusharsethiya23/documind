@@ -12,8 +12,8 @@ export const retrieve = (question, options = {}) => searchChunks(question, optio
 /** Retrieval gate: skip the LLM entirely when nothing relevant was found. */
 export const isAnswerable = (hits, minScore = config.minScore) => hits.length > 0 && hits[0].score >= minScore;
 
-export async function* generate(question, hits, llm) {
-  yield* llm.stream({ system: SYSTEM_PROMPT, user: buildUserPrompt(question, hits) });
+export async function* generate(question, hits, llm, { signal } = {}) {
+  yield* llm.stream({ system: SYSTEM_PROMPT, user: buildUserPrompt(question, hits), signal });
 }
 
 /** Extract [n] / [n, m] markers and map them to the retrieved passages. */

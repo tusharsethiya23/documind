@@ -1,6 +1,7 @@
 /**
  * LLM providers behind one interface:
- *   llm.stream({ system, user }) -> async iterator of text chunks
+ *   llm.stream({ system, user, signal? }) -> async iterator of text chunks
+ * Aborting `signal` (e.g. the browser closed the request) stops generation.
  */
 import Anthropic from '@anthropic-ai/sdk';
 import { Ollama } from 'ollama';
@@ -15,20 +16,23 @@ class ClaudeLLM {
     this.client = new Anthropic();
   }
 
-  async *stream({ system, user }) {
+  async *stream({ system, user, signal }) {
     let final;
     try {
       // Server-side fallback: if the model declines the request, the API
       // re-runs it on a fallback model inside the same call.
-      const stream = this.client.beta.messages.stream({
-        model: this.model,
-        max_tokens: 16000,
-        system,
-        messages: [{ role: 'user', content: user }],
-        output_config: { effort: config.claudeEffort },
-        betas: ['server-side-fallback-2026-07-01'],
-        fallbacks: 'default',
-      });
+      const stream = this.client.beta.messages.stream(
+        {
+          model: this.model,
+          max_tokens: 16000,
+          system,
+          messages: [{ role: 'user', content: user }],
+          output_config: { effort: config.claudeEffort },
+          betas: ['server-side-fallback-2026-07-01'],
+          fallbacks: 'default',
+        },
+        { signal },
+      );
       for await (const event of stream) {
         if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
           yield event.delta.text;
@@ -36,6 +40,7 @@ class ClaudeLLM {
       }
       final = await stream.finalMessage();
     } catch (err) {
+      if (signal?.aborted) return;
       if (err instanceof Anthropic.AuthenticationError) {
         throw new LLMError('Anthropic API key missing or invalid. Set ANTHROPIC_API_KEY in server/.env.');
       }
@@ -57,9 +62,12 @@ class OllamaLLM {
     this.client = new Ollama({ host: config.ollamaHost });
   }
 
-  async *stream({ system, user }) {
+  async *stream({ system, user, signal }) {
+    let response;
+    const onAbort = () => response?.abort();
+    signal?.addEventListener('abort', onAbort, { once: true });
     try {
-      const response = await this.client.chat({
+      response = await this.client.chat({
         model: this.model,
         messages: [
           { role: 'system', content: system },
@@ -70,6 +78,7 @@ class OllamaLLM {
       });
       for await (const part of response) yield part.message.content;
     } catch (err) {
+      if (signal?.aborted) return;
       if (err.name === 'ResponseError') {
         throw new LLMError(`Ollama error: ${err.error ?? err.message}. Did you run \`ollama pull ${this.model}\`?`);
       }
@@ -77,6 +86,8 @@ class OllamaLLM {
         throw new LLMError(`Could not reach Ollama at ${config.ollamaHost}. Is it running?`);
       }
       throw err;
+    } finally {
+      signal?.removeEventListener('abort', onAbort);
     }
   }
 }

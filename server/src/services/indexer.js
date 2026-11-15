@@ -1,4 +1,11 @@
-/** Indexing pipeline: PDF -> blocks -> chunks -> embeddings -> MongoDB. */
+/**
+ * Indexing pipeline: PDF -> blocks -> chunks -> embeddings -> MongoDB.
+ *
+ * Split in two so the API can answer an upload immediately:
+ *   createDocument()  saves the file and a "processing" record (fast)
+ *   processDocument() parses, chunks and embeds it (slow; run in background)
+ * indexPdf() does both and waits, which is what the CLI uses.
+ */
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { config } from '../config.js';
@@ -11,21 +18,15 @@ import { parsePdf, sha256 } from './pdfParser.js';
 const INSERT_BATCH = 100;
 
 /**
- * Index one PDF. Re-indexing an unchanged file is a no-op unless `force` is set.
+ * Store the PDF and create its record. Returns the existing record instead
+ * when the same file is already indexed (unless `force`).
  * @returns {Promise<{document: object, skipped: boolean}>}
  */
-export async function indexPdf(buffer, filename, { force = false, onProgress = () => {} } = {}) {
+export async function createDocument(buffer, filename, { force = false } = {}) {
   const fileHash = sha256(buffer);
   const existing = await Document.findOne({ fileHash });
-  if (existing?.status === 'ready' && !force) return { document: existing, skipped: true };
+  if (existing && !force && existing.status !== 'failed') return { document: existing, skipped: true };
   if (existing) await deleteDocument(existing._id);
-
-  onProgress('parsing');
-  const parsed = await parsePdf(buffer, filename);
-  const chunks = chunkDocument(parsed, { chunkChars: config.chunkChars, overlapChars: config.chunkOverlapChars });
-  if (!chunks.length) {
-    throw new Error(`No text found in ${filename}. It may be a scanned PDF (OCR is not supported yet).`);
-  }
 
   await fs.mkdir(config.uploadsDir, { recursive: true });
   const storagePath = path.join(config.uploadsDir, `${fileHash}.pdf`);
@@ -34,30 +35,63 @@ export async function indexPdf(buffer, filename, { force = false, onProgress = (
   const document = await Document.create({
     fileHash,
     filename,
-    title: parsed.title,
-    numPages: parsed.numPages,
+    title: filename.replace(/\.pdf$/i, ''),
     storagePath,
     status: 'processing',
   });
+  return { document, skipped: false };
+}
 
+/** Parse, chunk, embed and store. Marks the record "ready" or "failed". */
+export async function processDocument(document, buffer, { onProgress = () => {} } = {}) {
   try {
+    onProgress('parsing');
+    const parsed = await parsePdf(buffer, document.filename);
+    const chunks = chunkDocument(parsed, { chunkChars: config.chunkChars, overlapChars: config.chunkOverlapChars });
+    if (!chunks.length) {
+      throw new Error('No text found. It may be a scanned PDF (OCR is not supported yet).');
+    }
+
     onProgress(`embedding ${chunks.length} chunks`);
     const vectors = await embedPassages(chunks.map((c) => embeddingText(c, parsed.title)));
     const docs = chunks.map((c, i) => ({ ...c, documentId: document._id, embedding: vectors[i] }));
     for (let i = 0; i < docs.length; i += INSERT_BATCH) {
       await Chunk.insertMany(docs.slice(i, i + INSERT_BATCH), { ordered: true });
     }
-    document.numChunks = chunks.length;
-    document.status = 'ready';
+
+    Object.assign(document, {
+      title: parsed.title,
+      numPages: parsed.numPages,
+      numChunks: chunks.length,
+      status: 'ready',
+      error: undefined,
+    });
     await document.save();
-    return { document, skipped: false };
+    return document;
   } catch (err) {
+    await Chunk.deleteMany({ documentId: document._id });
     document.status = 'failed';
     document.error = err.message;
     await document.save();
-    await Chunk.deleteMany({ documentId: document._id });
     throw err;
   }
+}
+
+/** Index one PDF and wait for it to finish (used by the CLI). */
+export async function indexPdf(buffer, filename, { force = false, onProgress } = {}) {
+  const { document, skipped } = await createDocument(buffer, filename, { force });
+  if (skipped) return { document, skipped };
+  await processDocument(document, buffer, { onProgress });
+  return { document, skipped: false };
+}
+
+/** After a crash or restart, documents left "processing" will never finish. */
+export async function failInterruptedDocuments() {
+  const { modifiedCount } = await Document.updateMany(
+    { status: 'processing' },
+    { status: 'failed', error: 'Indexing was interrupted. Upload the file again.' },
+  );
+  return modifiedCount;
 }
 
 export async function deleteDocument(documentId) {

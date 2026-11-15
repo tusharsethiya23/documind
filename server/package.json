@@ -1,0 +1,27 @@
+{
+  "name": "documind-server",
+  "version": "1.0.0",
+  "description": "DocuMind API: PDF Q&A with page citations",
+  "scripts": {
+    "test": "node --test \"tests/**/*.test.js\"",
+    "cli": "node src/cli.js"
+  },
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^1.8.0",
+    "@huggingface/transformers": "^4.3.2",
+    "commander": "^15.1.0",
+    "dotenv": "^18.0.10",
+    "mongoose": "^9.12.1",
+    "ollama": "^0.6.4",
+    "pdfjs-dist": "^6.5.438",
+    "picocolors": "^1.1.1"
+  },
+  "devDependencies": {
+    "pdf-lib": "^1.17.1"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

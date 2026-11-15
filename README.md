@@ -1,0 +1,117 @@
+# DocuMind
+
+Ask questions about your PDFs (research papers, reports, company documents) and get answers that cite the exact page and passage they came from.
+
+Built with the **MERN** stack: MongoDB Atlas (documents, chunks and vectors in one database), Express, React and Node.
+
+> **Status: Week 1 of 4.** The ingestion and question-answering pipeline is done and usable from the command line. The REST API and the React UI come next. See the [Roadmap](#roadmap).
+
+## How it works
+
+```
+PDF ─► pdfjs-dist ─► text blocks ─► section-aware ─► local embeddings ─► MongoDB Atlas
+       (page + position   (headings,      chunks          (bge-small,          (Vector Search
+        of every block)    no headers/    (≤1200 chars,    transformers.js)     index)
+                           footers)        never cross
+                                           a heading)
+
+Question ─► embed ─► $vectorSearch ─► relevance gate ─► LLM (Claude / Ollama) ─► answer
+                     (top-k chunks)   (too weak? say      forced to cite [n]      + sources
+                                       "I don't know")                            (file, page, quote)
+```
+
+- **Grounded answers.** The model sees numbered sources and must cite one for every claim. Citations are parsed and mapped back to a file, page range and passage. An answer with no citations, or with a citation to a source that doesn't exist, is flagged.
+- **Says "I don't know".** If even the best match is weak, the LLM is never called. The model is also told to refuse when the sources don't contain the answer.
+- **Highlight-ready.** Every chunk stores the page rectangles it came from, so the UI can highlight the exact passage in the PDF.
+- **Free to index.** Embeddings run locally in Node, so indexing needs no API key.
+- **Pluggable LLM.** Claude (`claude-opus-5-5`) by default, or a free local model through Ollama.
+
+## Setup
+
+Requirements: Node 20+ and a free MongoDB Atlas account.
+
+### 1. MongoDB Atlas (free tier)
+
+1. Sign up at <https://www.mongodb.com/cloud/atlas/register> and create a free **M0** cluster.
+2. **Database Access**: add a database user with a password.
+3. **Network Access**: add your IP address (or `0.0.0.0/0` while developing).
+4. **Connect → Drivers**: copy the connection string.
+
+### 2. Configure
+
+```bash
+cd server
+npm install
+cp .env.example .env     # Windows PowerShell: Copy-Item .env.example .env
+```
+
+Edit `server/.env`:
+- `MONGODB_URI`: your Atlas connection string (with the password filled in)
+- `ANTHROPIC_API_KEY`: from <https://console.anthropic.com>. Or set `LLM_PROVIDER=ollama` and install [Ollama](https://ollama.com) for a free local model.
+
+### 3. Create the vector index (once)
+
+```bash
+npm run cli -- setup
+npm run cli -- status    # wait until it says READY (queryable), about a minute
+```
+
+## Usage
+
+```bash
+npm run cli -- ingest ../papers/            # a folder or individual PDFs
+npm run cli -- docs                         # list what's indexed
+npm run cli -- search "attention mechanism" # retrieval only, no LLM, no API key
+npm run cli -- ask "What dataset did they evaluate on?" --show-context
+npm run cli -- chat                         # interactive
+npm run cli -- ask "..." --doc <id>         # restrict to one document
+npm run cli -- ask "..." --provider ollama
+```
+
+What an answer looks like (illustrative):
+
+```
+They evaluate on SQuAD v1.1 and Natural Questions [2], reporting 87.5% exact match [3].
+
+Sources
+  [2] paper.pdf, p. 6 · 4 Experiments
+      "We evaluate on two open-domain QA benchmarks: SQuAD v1.1 and Natural Questions…"
+  [3] paper.pdf, p. 7 · 5 Results
+      "Our best model reaches 87.5% exact match on the held-out set…"
+```
+
+## Tests
+
+```bash
+cd server && npm test
+```
+
+The tests cover PDF parsing (on a generated PDF), chunking, citation parsing, the refusal logic and prompt building. They need no database or API key.
+
+## Project structure
+
+```
+server/
+  src/
+    cli.js                  command-line interface
+    config.js               settings from .env
+    db.js                   MongoDB connection
+    models/                 Document, Chunk (Mongoose)
+    services/
+      pdfParser.js          PDF → blocks (page, position, headings)
+      chunker.js            blocks → section-aware chunks
+      embeddings.js         local bge-small embeddings
+      indexer.js            the full ingestion pipeline
+      vectorSearch.js       Atlas Vector Search index + queries
+      prompts.js            system prompt, numbered sources
+      llm.js                Claude / Ollama streaming
+      qa.js                 retrieve → gate → generate → citations
+  tests/
+```
+
+## Roadmap
+
+- [x] **Week 1: core pipeline.** PDF parsing with page positions, section-aware chunking, local embeddings, Atlas Vector Search, cited answers, "I don't know" gate, CLI, tests.
+- [ ] **Week 2: API and UI.** Express REST API (upload, documents, streaming answers over SSE) and a React (Vite) chat beside a PDF viewer that highlights the cited passage.
+- [ ] **Week 3: quality.** Hybrid search (Atlas full-text + vector), reranking, and an evaluation set with before/after metrics.
+- [ ] **Week 4: ship.** Multi-document comparison, Docker, deployment, demo GIF.

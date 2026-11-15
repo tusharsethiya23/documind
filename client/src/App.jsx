@@ -1,5 +1,8 @@
+import { useCallback, useMemo, useState } from 'react'
+import DocumentPanel from './components/DocumentPanel.jsx'
 import Header from './components/Header.jsx'
-import { BookIcon, ChatIcon, FileIcon } from './components/Icons.jsx'
+import { BookIcon, ChatIcon } from './components/Icons.jsx'
+import { useDocuments } from './hooks/useDocuments.js'
 
 function EmptyState({ icon: Icon, title, children }) {
   return (
@@ -14,18 +17,31 @@ function EmptyState({ icon: Icon, title, children }) {
 }
 
 export default function App() {
+  const docs = useDocuments()
+  // Documents the next question is limited to (empty = search everything).
+  const [selectedIds, setSelectedIds] = useState([])
+
+  const toggleSelected = useCallback(
+    (id) => setSelectedIds((ids) => (ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id])),
+    [],
+  )
+
+  // Ignore selections for documents that were deleted or are no longer ready.
+  const activeSelectedIds = useMemo(() => {
+    const ready = new Set(docs.documents.filter((d) => d.status === 'ready').map((d) => d.id))
+    return selectedIds.filter((id) => ready.has(id))
+  }, [docs.documents, selectedIds])
+
   return (
     <div className="app">
       <Header />
       <main className="workspace">
-        <section className="panel sidebar" aria-label="Documents">
-          <div className="panel-header">Documents</div>
-          <div className="panel-body">
-            <EmptyState icon={FileIcon} title="No documents yet">
-              Upload PDFs (papers, reports, policies) to start asking questions.
-            </EmptyState>
-          </div>
-        </section>
+        <DocumentPanel
+          docs={docs}
+          selectedIds={activeSelectedIds}
+          onToggle={toggleSelected}
+          onClearSelection={() => setSelectedIds([])}
+        />
 
         <section className="panel chat" aria-label="Chat">
           <div className="panel-header">Ask</div>

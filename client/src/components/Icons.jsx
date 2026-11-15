@@ -23,6 +23,25 @@ export const ChatIcon = (props) => (
   </svg>
 )
 
+export const UploadIcon = (props) => (
+  <svg {...base} {...props}>
+    <path d="M12 16V4M7 9l5-5 5 5" />
+    <path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3" />
+  </svg>
+)
+
+export const TrashIcon = (props) => (
+  <svg {...base} {...props}>
+    <path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3" />
+  </svg>
+)
+
+export const XIcon = (props) => (
+  <svg {...base} {...props}>
+    <path d="M6 6l12 12M18 6L6 18" />
+  </svg>
+)
+
 export const BookIcon = (props) => (
   <svg {...base} {...props}>
     <path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z" />

@@ -215,6 +215,284 @@ button {
   opacity: 0.7;
 }
 
+/* ---------- Shared bits ---------- */
+
+.muted {
+  color: var(--text-muted);
+}
+
+.small {
+  font-size: 0.85rem;
+}
+
+.icon-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.icon-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.icon-btn:hover:not(:disabled) {
+  background: var(--surface);
+  color: var(--text);
+}
+
+.icon-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.link-btn {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--accent);
+  font-size: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.notice {
+  margin: 10px 0;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+}
+
+.notice-error {
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+  color: var(--danger);
+}
+
+.badge {
+  display: inline-block;
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.badge-busy {
+  background: var(--accent-soft);
+  color: var(--accent-text);
+  animation: pulse 1.6s ease-in-out infinite;
+}
+
+.badge-error {
+  background: color-mix(in srgb, var(--danger) 14%, transparent);
+  color: var(--danger);
+  cursor: help;
+}
+
+@keyframes pulse {
+  50% {
+    opacity: 0.55;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .badge-busy {
+    animation: none;
+  }
+}
+
+/* ---------- Documents panel ---------- */
+
+.sidebar.is-dragging {
+  outline: 2px dashed var(--accent);
+  outline-offset: -8px;
+  background: var(--accent-soft);
+}
+
+.dropzone {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 14px;
+  border: 1.5px dashed var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.dropzone:hover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.dropzone svg {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  color: var(--accent);
+}
+
+.dropzone span {
+  display: flex;
+  flex-direction: column;
+}
+
+.dropzone small {
+  color: var(--text-muted);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.upload {
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+
+.upload-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  font-size: 0.88rem;
+}
+
+.upload-error {
+  border-color: color-mix(in srgb, var(--danger) 40%, var(--border));
+}
+
+.upload-message {
+  margin-top: 2px;
+  font-size: 0.8rem;
+  color: var(--danger);
+}
+
+.progress {
+  height: 4px;
+  margin-top: 6px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+
+.progress-bar {
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.2s;
+}
+
+.scope {
+  margin: 14px 2px 0;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.doc {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 8px 6px 8px 10px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.doc-selected {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.doc-main {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  gap: 10px;
+  cursor: pointer;
+}
+
+.doc-inactive .doc-main {
+  cursor: default;
+}
+
+.doc-main input {
+  flex: none;
+  margin: 3px 0 0;
+  accent-color: var(--accent);
+}
+
+.doc-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.doc-name,
+.doc-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.doc-name {
+  font-size: 0.9rem;
+  font-weight: 550;
+}
+
+.doc-title {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.doc-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+  font-size: 0.76rem;
+  color: var(--text-muted);
+}
+
+.doc-delete {
+  flex: none;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.doc:hover .doc-delete,
+.doc-delete:focus-visible {
+  opacity: 1;
+}
+
+@media (hover: none) {
+  .doc-delete {
+    opacity: 1;
+  }
+}
+
+.empty-compact {
+  min-height: 140px;
+  height: auto;
+}
+
 /* ---------- Responsive ---------- */
 
 @media (max-width: 1100px) {

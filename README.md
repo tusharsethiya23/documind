@@ -80,19 +80,59 @@ Sources
       "Our best model reaches 87.5% exact match on the held-out set…"
 ```
 
+## REST API
+
+```bash
+cd server
+npm run dev        # http://localhost:5000, restarts on file changes
+```
+
+| Method | Route | What it does |
+|---|---|---|
+| `GET` | `/api/health` | Database and vector index status |
+| `GET` | `/api/documents` | List documents |
+| `POST` | `/api/documents` | Upload a PDF (multipart field `file`). Returns `202`; indexing continues in the background. |
+| `GET` | `/api/documents/:id` | One document, including its `status` (`processing` → `ready` / `failed`) |
+| `GET` | `/api/documents/:id/file` | The original PDF, for the viewer |
+| `DELETE` | `/api/documents/:id` | Remove a document and its chunks |
+| `POST` | `/api/ask` | `{ question, documentIds?, topK?, provider? }`. Streams the answer as Server-Sent Events. |
+
+`/api/ask` sends these events:
+
+| Event | Data |
+|---|---|
+| `sources` | The retrieved passages, numbered from 1, with file, pages, section, text and highlight regions |
+| `token` | `{ text }`: the next piece of the answer |
+| `done` | `{ text, refused, citations: [numbers], uncited, invalidCitations }` |
+| `error` | `{ message }` |
+
+If the browser disconnects, generation stops so you don't pay for tokens nobody reads.
+
+Try it with curl:
+
+```bash
+curl -F "file=@paper.pdf" http://localhost:5000/api/documents
+curl -N -X POST http://localhost:5000/api/ask -H "Content-Type: application/json" \
+     -d '{"question": "What dataset did they use?"}'
+```
+
 ## Tests
 
 ```bash
 cd server && npm test
 ```
 
-The tests cover PDF parsing (on a generated PDF), chunking, citation parsing, the refusal logic and prompt building. They need no database or API key.
+The tests cover PDF parsing (on a generated PDF), chunking, citation parsing, the refusal logic, prompt building, and the API's validation and error handling. They need no database or API key.
 
 ## Project structure
 
 ```
 server/
   src/
+    server.js               starts the API
+    app.js                  Express app
+    routes/                 documents, ask (SSE), health
+    middleware/errors.js    validation and JSON errors
     cli.js                  command-line interface
     config.js               settings from .env
     db.js                   MongoDB connection

@@ -80,6 +80,17 @@ Sources
       "Our best model reaches 87.5% exact match on the held-out set…"
 ```
 
+## Web app
+
+Run the API and the React app in two terminals:
+
+```bash
+cd server && npm run dev     # API on http://localhost:5000
+cd client && npm install && npm run dev     # app on http://localhost:5173
+```
+
+In development, Vite forwards `/api` requests to the API. To point a production build at a different API, set `VITE_API_URL` (for example `https://api.example.com/api`) before running `npm run build`.
+
 ## REST API
 
 ```bash
@@ -120,6 +131,7 @@ curl -N -X POST http://localhost:5000/api/ask -H "Content-Type: application/json
 
 ```bash
 cd server && npm test
+cd client && npm test
 ```
 
 The tests cover PDF parsing (on a generated PDF), chunking, citation parsing, the refusal logic, prompt building, and the API's validation and error handling. They need no database or API key.
@@ -127,6 +139,12 @@ The tests cover PDF parsing (on a generated PDF), chunking, citation parsing, th
 ## Project structure
 
 ```
+client/                     React app (Vite)
+  src/
+    App.jsx                 three-panel layout: documents, chat, PDF viewer
+    components/             Header (API status), icons
+    lib/api.js              API client, including the streaming answer parser
+  tests/
 server/
   src/
     server.js               starts the API

@@ -905,3 +905,23 @@ button {
 .coverage {
   margin: 0 0 6px;
 }
+
+/* ---------- Demo mode ---------- */
+
+.badge-demo {
+  margin-right: 4px;
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+
+.notice-demo {
+  margin: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+
+.notice-demo strong {
+  color: var(--text);
+}

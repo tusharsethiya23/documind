@@ -1,0 +1,11 @@
+.git
+**/node_modules
+**/.env
+**/dist
+papers
+server/uploads
+server/.cache
+server/tests
+server/eval
+client/tests
+*.log

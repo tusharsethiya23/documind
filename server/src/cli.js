@@ -31,6 +31,7 @@ import {
   retrieveForComparison,
 } from './services/qa.js';
 import { ensureSearchIndexes, searchIndexStatus } from './services/search.js';
+import { migrateDiskFiles } from './services/storage.js';
 
 const scoreLabel = (h) => {
   const vector = h.score == null ? '  —  ' : h.score.toFixed(3);
@@ -188,6 +189,18 @@ program
           console.log(pc.red(`✗ ${name}: ${err.message}`));
         }
       }
+    }),
+  );
+
+program
+  .command('migrate-files')
+  .description('Move PDFs saved on disk by older versions into MongoDB (GridFS)')
+  .action(
+    withDB(async () => {
+      const docs = await Document.find().select('filename fileHash').lean();
+      const { moved, missing } = await migrateDiskFiles(docs);
+      console.log(`Moved ${moved} PDF(s) into MongoDB; ${docs.length - moved - missing.length} were already there.`);
+      if (missing.length) console.log(pc.yellow(`No file found for: ${missing.join(', ')}. Re-upload these.`));
     }),
   );
 

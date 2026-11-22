@@ -78,26 +78,28 @@ function DocumentRow({ doc, selected, onToggle, onRemove }) {
           </span>
         </span>
       </label>
-      <button
-        className="icon-btn doc-delete"
-        onClick={remove}
-        disabled={busy || doc.status === 'processing'}
-        aria-label={`Remove ${doc.filename}`}
-        title="Remove"
-      >
-        <TrashIcon />
-      </button>
+      {onRemove && (
+        <button
+          className="icon-btn doc-delete"
+          onClick={remove}
+          disabled={busy || doc.status === 'processing'}
+          aria-label={`Remove ${doc.filename}`}
+          title="Remove"
+        >
+          <TrashIcon />
+        </button>
+      )}
     </li>
   )
 }
 
-export default function DocumentPanel({ docs, selectedIds, onToggle, onClearSelection }) {
+export default function DocumentPanel({ docs, selectedIds, onToggle, onClearSelection, readOnly = false }) {
   const { documents, loading, error, uploads, upload, dismissUpload, remove } = docs
   const inputRef = useRef(null)
   const [dragging, setDragging] = useState(false)
 
   const onFiles = (fileList) => {
-    if (fileList?.length) upload(fileList)
+    if (fileList?.length && !readOnly) upload(fileList)
   }
 
   const onDrop = (e) => {
@@ -114,7 +116,7 @@ export default function DocumentPanel({ docs, selectedIds, onToggle, onClearSele
       aria-label="Documents"
       onDragOver={(e) => {
         e.preventDefault()
-        setDragging(true)
+        if (!readOnly) setDragging(true)
       }}
       onDragLeave={(e) => {
         if (!e.currentTarget.contains(e.relatedTarget)) setDragging(false)
@@ -126,24 +128,32 @@ export default function DocumentPanel({ docs, selectedIds, onToggle, onClearSele
       </div>
 
       <div className="panel-body">
-        <button className="dropzone" onClick={() => inputRef.current?.click()}>
-          <UploadIcon />
-          <span>
-            <strong>Upload PDFs</strong>
-            <small>or drop them here</small>
-          </span>
-        </button>
-        <input
-          ref={inputRef}
-          type="file"
-          accept="application/pdf,.pdf"
-          multiple
-          hidden
-          onChange={(e) => {
-            onFiles(e.target.files)
-            e.target.value = '' // allow picking the same file again
-          }}
-        />
+        {readOnly ? (
+          <div className="notice notice-demo">
+            <strong>Demo library.</strong> Ask about these papers; uploading is off here. Run it yourself to use your own PDFs.
+          </div>
+        ) : (
+          <>
+            <button className="dropzone" onClick={() => inputRef.current?.click()}>
+              <UploadIcon />
+              <span>
+                <strong>Upload PDFs</strong>
+                <small>or drop them here</small>
+              </span>
+            </button>
+            <input
+              ref={inputRef}
+              type="file"
+              accept="application/pdf,.pdf"
+              multiple
+              hidden
+              onChange={(e) => {
+                onFiles(e.target.files)
+                e.target.value = '' // allow picking the same file again
+              }}
+            />
+          </>
+        )}
 
         {uploads.length > 0 && (
           <ul className="list uploads" aria-label="Uploads">
@@ -187,7 +197,7 @@ export default function DocumentPanel({ docs, selectedIds, onToggle, onClearSele
                 doc={doc}
                 selected={selectedIds.includes(doc.id)}
                 onToggle={onToggle}
-                onRemove={remove}
+                onRemove={readOnly ? null : remove}
               />
             ))}
           </ul>

@@ -6,22 +6,15 @@
  *   processDocument() parses, chunks and embeds it (slow; run in background)
  * indexPdf() does both and waits, which is what the CLI uses.
  */
-import fs from 'node:fs/promises';
-import path from 'node:path';
 import { config } from '../config.js';
 import { Chunk } from '../models/Chunk.js';
 import { Document } from '../models/Document.js';
 import { chunkDocument, embeddingText } from './chunker.js';
 import { embedPassages } from './embeddings.js';
 import { parsePdf, sha256 } from './pdfParser.js';
+import { deletePdf, savePdf } from './storage.js';
 
 const INSERT_BATCH = 100;
-
-/**
- * Where a document's PDF lives. Derived from the content hash and the configured
- * uploads folder (not a stored absolute path), so it works on any machine or container.
- */
-export const pdfPath = (doc) => path.join(config.uploadsDir, `${doc.fileHash}.pdf`);
 
 /**
  * Store the PDF and create its record. Returns the existing record instead
@@ -34,15 +27,12 @@ export async function createDocument(buffer, filename, { force = false } = {}) {
   if (existing && !force && existing.status !== 'failed') return { document: existing, skipped: true };
   if (existing) await deleteDocument(existing._id);
 
-  await fs.mkdir(config.uploadsDir, { recursive: true });
-  const storagePath = path.join(config.uploadsDir, `${fileHash}.pdf`);
-  await fs.writeFile(storagePath, buffer);
+  await savePdf(fileHash, buffer); // GridFS, so the file survives container restarts
 
   const document = await Document.create({
     fileHash,
     filename,
     title: filename.replace(/\.pdf$/i, ''),
-    storagePath,
     status: 'processing',
   });
   return { document, skipped: false };
@@ -105,6 +95,6 @@ export async function deleteDocument(documentId) {
   if (!doc) return false;
   await Chunk.deleteMany({ documentId: doc._id });
   await Document.deleteOne({ _id: doc._id });
-  await fs.rm(pdfPath(doc), { force: true });
+  await deletePdf(doc.fileHash);
   return true;
 }

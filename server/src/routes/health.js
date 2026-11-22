@@ -15,6 +15,7 @@ router.get('/', async (_req, res) => {
     textIndex: indexes?.text ?? 'missing',
     searchMode: config.searchMode,
     llmProvider: config.llmProvider,
+    readOnly: config.readOnly,
   });
 });
 

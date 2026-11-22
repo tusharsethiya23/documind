@@ -7,7 +7,9 @@ const documentSchema = new mongoose.Schema(
     title: { type: String, required: true },
     numPages: { type: Number, default: 0 },
     numChunks: { type: Number, default: 0 },
-    storagePath: { type: String, required: true }, // where the PDF is kept for the viewer
+    // The PDF itself is stored in GridFS (bucket "pdfs") as `<fileHash>.pdf`.
+    // storagePath is a leftover from disk storage, kept so old records still load.
+    storagePath: { type: String },
     status: { type: String, enum: ['processing', 'ready', 'failed'], default: 'processing' },
     error: { type: String },
   },

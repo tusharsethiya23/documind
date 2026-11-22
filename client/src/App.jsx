@@ -2,6 +2,7 @@ import { lazy, Suspense, useCallback, useMemo, useState } from 'react'
 import ChatPanel from './components/ChatPanel.jsx'
 import DocumentPanel from './components/DocumentPanel.jsx'
 import Header from './components/Header.jsx'
+import { useHealth } from './hooks/useHealth.js'
 
 // pdf.js is large; load the viewer in its own chunk so the app opens fast.
 const PdfViewer = lazy(() => import('./components/PdfViewer.jsx'))
@@ -9,6 +10,7 @@ import { useChat } from './hooks/useChat.js'
 import { useDocuments } from './hooks/useDocuments.js'
 
 export default function App() {
+  const { health, error: healthError } = useHealth()
   const docs = useDocuments()
   const chat = useChat()
   // Documents the next question is limited to (empty = search everything).
@@ -33,10 +35,11 @@ export default function App() {
 
   return (
     <div className="app">
-      <Header />
+      <Header health={health} error={healthError} />
       <main className="workspace">
         <DocumentPanel
           docs={docs}
+          readOnly={Boolean(health?.readOnly)}
           selectedIds={activeSelectedIds}
           onToggle={toggleSelected}
           onClearSelection={() => setSelectedIds([])}

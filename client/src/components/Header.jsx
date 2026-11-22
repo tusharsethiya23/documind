@@ -1,8 +1,3 @@
-import { useEffect, useState } from 'react'
-import { getHealth } from '../lib/api.js'
-
-const POLL_MS = 30_000
-
 /** Turns the /api/health response into a short status line. */
 function describe(health, error) {
   if (error) return { tone: 'down', text: 'API offline' }
@@ -14,31 +9,7 @@ function describe(health, error) {
   return { tone: 'ok', text: `Ready · ${health.llmProvider}` }
 }
 
-export default function Header() {
-  const [health, setHealth] = useState(null)
-  const [error, setError] = useState(null)
-
-  useEffect(() => {
-    let cancelled = false
-    const check = async () => {
-      try {
-        const h = await getHealth()
-        if (!cancelled) {
-          setHealth(h)
-          setError(null)
-        }
-      } catch (err) {
-        if (!cancelled) setError(err)
-      }
-    }
-    check()
-    const timer = setInterval(check, POLL_MS)
-    return () => {
-      cancelled = true
-      clearInterval(timer)
-    }
-  }, [])
-
+export default function Header({ health, error }) {
   const { tone, text } = describe(health, error)
 
   return (
@@ -49,6 +20,7 @@ export default function Header() {
         <small>Ask your documents. Get cited answers.</small>
       </div>
       <span className="status" role="status" title={error?.message}>
+        {health?.readOnly && <span className="badge badge-demo">Demo</span>}
         <span className={`status-dot ${tone}`} />
         {text}
       </span>

@@ -10,9 +10,6 @@ services:
       CLIENT_ORIGIN: http://localhost:8080
     extra_hosts:
       - host.docker.internal:host-gateway
-    volumes:
-      # Same folder the dev server uses, so uploaded PDFs are shared.
-      - ./server/uploads:/app/uploads
     restart: unless-stopped
 
   client:

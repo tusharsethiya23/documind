@@ -135,7 +135,16 @@ Open <http://localhost:8080>. Stop it with `docker compose down`.
 - **server**: the API on Node 22 (Debian slim). The embedding and reranking models are downloaded at build time, so the container starts ready and runs them offline. The image is about 1.2 GB: unused onnxruntime binaries for other operating systems and GPUs are stripped.
 - **client**: the built React app served by nginx, which also proxies `/api` with buffering off so answers stream token by token.
 - MongoDB stays on Atlas (Vector Search needs it). With `LLM_PROVIDER=ollama`, the container reaches Ollama on your machine through `host.docker.internal`.
-- Uploaded PDFs live in `server/uploads`, shared with the dev server.
+- Uploaded PDFs are stored in MongoDB (GridFS) next to their chunks, so containers keep no state and can be restarted or moved freely. If you indexed PDFs with an older version that saved them to disk, run `npm run cli -- migrate-files` once.
+
+**Single container (used for the hosted demo).** The root [`Dockerfile`](Dockerfile) builds the React app and serves it from the API on one port (7860), with no nginx:
+
+```bash
+docker build -t documind .
+docker run -p 7860:7860 --env-file server/.env -e READ_ONLY=true -e ASK_LIMIT_PER_10_MIN=20 documind
+```
+
+Demo settings: `READ_ONLY=true` turns off uploading and deleting (the UI shows a "Demo library" note instead), `ASK_LIMIT_PER_10_MIN` caps questions per visitor IP to protect a free LLM quota, and `TRUST_PROXY=1` (set by the Dockerfile) makes the limit see the visitor's IP behind the host's proxy.
 
 ## REST API
 

@@ -42,15 +42,40 @@ export function isAnswerable(hits, { minScore = config.minScore, rerankGate = co
 }
 
 /**
- * Some models (e.g. gpt-oss) cite with full-width brackets "【1】".
- * Normalise to [1] so citations are recognised everywhere. Each bracket is one
- * character, so converting chunk by chunk is safe.
+ * Some models (e.g. gpt-oss) cite in their own style: "【1】", or with line
+ * ranges like "【1†L1-L3】" / "[2†L5]". Normalise all of these to [1] so
+ * citations are recognised everywhere.
  */
-export const normalizeCitations = (text) => text.replace(/【/g, '[').replace(/】/g, ']');
+export const normalizeCitations = (text) =>
+  text
+    .replace(/【\s*(\d+)[^】]*】/g, '[$1]')
+    .replace(/\[(\d+)†[^\]]*\]/g, '[$1]')
+    .replace(/【/g, '[')
+    .replace(/】/g, ']');
 
+/**
+ * Apply normalizeCitations to a token stream. A marker like "【1†L1-L3】" can be
+ * split across chunks, so text from an unclosed "【" (or "[n†") is held back
+ * until its closing bracket arrives (or 40 characters pass without one).
+ */
 async function* normalized(stream) {
-  for await (const part of stream) yield normalizeCitations(part);
+  let pending = '';
+  for await (const part of stream) {
+    pending += part;
+    const open = Math.max(pending.lastIndexOf('【'), pending.search(/\[\d+†[^\]]*$/));
+    const closed = open !== -1 && /[】\]]/.test(pending.slice(open + 1));
+    if (open !== -1 && !closed && pending.length - open < 40) {
+      if (open > 0) yield normalizeCitations(pending.slice(0, open));
+      pending = pending.slice(open);
+      continue;
+    }
+    yield normalizeCitations(pending);
+    pending = '';
+  }
+  if (pending) yield normalizeCitations(pending);
 }
+
+export const normalizeCitationStream = normalized;
 
 export async function* generate(question, hits, llm, { signal } = {}) {
   yield* normalized(llm.stream({ system: SYSTEM_PROMPT, user: buildUserPrompt(question, hits), signal }));

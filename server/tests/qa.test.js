@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { buildComparePrompt, buildUserPrompt, stripReferenceMarkers } from '../src/services/prompts.js';
-import { finalize, isAnswerable, normalizeCitations, parseCitations, REFUSAL } from '../src/services/qa.js';
+import { finalize, isAnswerable, normalizeCitations, normalizeCitationStream, parseCitations, REFUSAL } from '../src/services/qa.js';
 
 const hit = (n, score = 0.9) => ({
   chunkId: `c${n}`,
@@ -19,6 +19,16 @@ test('parses single, adjacent and grouped citations', () => {
   assert.deepEqual(citations.map((c) => c.number), [1, 2, 3]);
   assert.equal(citations[1].hit.chunkId, 'c2');
   assert.deepEqual(invalid, []);
+});
+
+test('normalises gpt-oss citation styles, even when split across stream chunks', async () => {
+  assert.equal(normalizeCitations('MIPS【1†L1-L3】【2† L5】 and [3†L2].'), 'MIPS[1][2] and [3].');
+  async function* chunks() {
+    yield* ['Maximum Inner Product Search【', '1†L1', '-L3】', '[2†', 'L4] done【3】.'];
+  }
+  let out = '';
+  for await (const part of normalizeCitationStream(chunks())) out += part;
+  assert.equal(out, 'Maximum Inner Product Search[1][2] done[3].');
 });
 
 test('normalises full-width citation brackets', () => {

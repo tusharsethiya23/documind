@@ -46,6 +46,7 @@ export const config = {
   rerankCandidates: Number(env('RERANK_CANDIDATES', '20')), // how many search results the reranker sees
   // Drop passages the reranker scores below this (clearly irrelevant ones score around -10).
   rerankMinScore: Number(env('RERANK_MIN_SCORE', '-5')),
+  rerankBatch: Number(env('RERANK_BATCH', '2')), // passages per reranker call; lower = less memory
   // Say "I don't know" if even the best passage scores below this (see eval/RESULTS.md).
   rerankGate: Number(env('RERANK_GATE', '-4')),
   // Atlas reports cosine similarity rescaled to 0..1 as (1 + cos) / 2.

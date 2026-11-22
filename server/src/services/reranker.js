@@ -23,7 +23,10 @@ const load = () => {
   return loading;
 };
 
-const BATCH = 16;
+// Passages scored per model call. Smaller batches use far less peak memory
+// (activations scale with batch x length) at the same results; 2 keeps the
+// server inside a 512 MB free-tier container.
+const BATCH = config.rerankBatch;
 
 /** Relevance score per passage (higher = better; raw logits, roughly -12..12). */
 export async function scorePassages(question, passages) {

@@ -1,14 +1,3 @@
----
-title: DocuMind
-emoji: 📄
-colorFrom: indigo
-colorTo: blue
-sdk: docker
-app_port: 7860
-pinned: false
-short_description: Ask PDFs questions, get answers with page citations
----
-
 # DocuMind
 
 Ask questions about your PDFs (research papers, reports, company documents) and get answers that cite the exact page and passage they came from.
@@ -148,7 +137,7 @@ Open <http://localhost:8080>. Stop it with `docker compose down`.
 - MongoDB stays on Atlas (Vector Search needs it). With `LLM_PROVIDER=ollama`, the container reaches Ollama on your machine through `host.docker.internal`.
 - Uploaded PDFs are stored in MongoDB (GridFS) next to their chunks, so containers keep no state and can be restarted or moved freely. If you indexed PDFs with an older version that saved them to disk, run `npm run cli -- migrate-files` once.
 
-**Single container (used for the hosted demo).** The root [`Dockerfile`](Dockerfile) builds the React app and serves it from the API on one port (7860), with no nginx:
+**Single container (used for the hosted demo).** The root [`Dockerfile`](Dockerfile) builds the React app and serves it from the API on one port, with no nginx:
 
 ```bash
 docker build -t documind .

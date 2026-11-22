@@ -1,0 +1,26 @@
+# Render Blueprint for the public demo: https://render.com/docs/blueprint-spec
+# Render → New → Blueprint → pick this repo. You'll be asked for the two secrets.
+services:
+  - type: web
+    name: documind
+    runtime: docker
+    plan: free # 512 MB RAM: the reranker runs in small batches (RERANK_BATCH=2) to fit
+    region: singapore
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/health
+    autoDeploy: true # redeploy on every push to main
+    envVars:
+      - key: MONGODB_URI
+        sync: false # secret: entered in the Render dashboard, never committed
+      - key: GROQ_API_KEY
+        sync: false
+      - key: LLM_PROVIDER
+        value: groq
+      - key: READ_ONLY
+        value: "true"
+      - key: ASK_LIMIT_PER_10_MIN
+        value: "20"
+      - key: TRUST_PROXY
+        value: "1"
+      - key: RERANK_BATCH
+        value: "2"

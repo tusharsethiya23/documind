@@ -1,5 +1,5 @@
 # DocuMind as a single container: the API also serves the built web app.
-# Used for the hosted demo (Hugging Face Spaces expects port 7860).
+# Used for the hosted demo (Render sets PORT itself; 7860 is the default).
 # For local development with two containers, see docker-compose.yml.
 
 # ---- 1. Build the React app ----
@@ -19,7 +19,7 @@ ENV NODE_ENV=production \
     CLIENT_DIST=/app/public \
     TRUST_PROXY=1
 WORKDIR /app
-# Build as the unprivileged user (uid 1000, which Hugging Face also uses):
+# Build as the unprivileged user (uid 1000):
 # a `chown -R` afterwards would copy every file into a new layer.
 RUN chown node:node /app
 USER node

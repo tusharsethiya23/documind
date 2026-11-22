@@ -8,9 +8,18 @@ const EXAMPLES = [
   'What limitations do the authors mention?',
 ]
 
+const COMPARE_EXAMPLES = [
+  'How do their methods differ?',
+  'What datasets does each one use?',
+  'What hardware was each trained on?',
+]
+
 export default function ChatPanel({ chat, readyCount, selectedCount, activeChunkId, onAsk, onOpenSource }) {
   const { messages, busy, stop, clear } = chat
   const [draft, setDraft] = useState('')
+  const [wantCompare, setWantCompare] = useState(false)
+  const canCompare = selectedCount >= 2 && selectedCount <= 4
+  const comparing = wantCompare && canCompare
   const scrollRef = useRef(null)
   const stickToBottom = useRef(true)
   const inputRef = useRef(null)
@@ -31,11 +40,18 @@ export default function ChatPanel({ chat, readyCount, selectedCount, activeChunk
     const question = text.trim()
     if (!question || !canAsk) return
     stickToBottom.current = true
-    onAsk(question)
+    onAsk(question, comparing ? 'compare' : 'ask')
     setDraft('')
   }
 
-  const scope = selectedCount ? `Searching ${selectedCount} selected document${selectedCount > 1 ? 's' : ''}` : 'Searching all documents'
+  const scope = comparing
+    ? `Comparing ${selectedCount} documents side by side`
+    : selectedCount
+      ? `Searching ${selectedCount} selected document${selectedCount > 1 ? 's' : ''}`
+      : 'Searching all documents'
+  const compareHint =
+    selectedCount > 4 ? 'Compare up to 4 documents' : selectedCount < 2 ? 'Tick 2–4 documents to compare them' : undefined
+  const examples = comparing ? COMPARE_EXAMPLES : EXAMPLES
 
   return (
     <section className="panel chat" aria-label="Chat">
@@ -65,7 +81,7 @@ export default function ChatPanel({ chat, readyCount, selectedCount, activeChunk
               <p>Every answer cites the page it came from. If the documents don't say, DocuMind says so.</p>
               {readyCount > 0 && (
                 <div className="examples">
-                  {EXAMPLES.map((q) => (
+                  {examples.map((q) => (
                     <button key={q} className="chip" onClick={() => submit(q)} disabled={!canAsk}>
                       {q}
                     </button>
@@ -78,6 +94,7 @@ export default function ChatPanel({ chat, readyCount, selectedCount, activeChunk
           messages.map((m) =>
             m.role === 'user' ? (
               <div key={m.id} className="question">
+                {m.mode === 'compare' && <span className="question-tag">Compare · {m.documentIds.length} documents</span>}
                 {m.text}
               </div>
             ) : (
@@ -111,7 +128,31 @@ export default function ChatPanel({ chat, readyCount, selectedCount, activeChunk
           aria-label="Your question"
         />
         <div className="composer-bar">
-          <span className="small muted">{readyCount ? scope : ''}</span>
+          {readyCount > 0 && (
+            <div className="mode-switch" role="radiogroup" aria-label="Question mode">
+              <button
+                type="button"
+                role="radio"
+                aria-checked={!comparing}
+                className={!comparing ? 'on' : ''}
+                onClick={() => setWantCompare(false)}
+              >
+                Ask
+              </button>
+              <button
+                type="button"
+                role="radio"
+                aria-checked={comparing}
+                className={comparing ? 'on' : ''}
+                onClick={() => setWantCompare(true)}
+                disabled={!canCompare}
+                title={compareHint}
+              >
+                Compare
+              </button>
+            </div>
+          )}
+          <span className="small muted composer-scope">{readyCount ? scope : ''}</span>
           {busy ? (
             <button type="button" className="btn btn-secondary" onClick={stop}>
               Stop

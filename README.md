@@ -43,6 +43,7 @@ Question ─┬─► $vectorSearch (meaning) ──┐
 - **Grounded answers.** The model sees numbered sources and must cite one for every claim. Citations are parsed and mapped back to a file, page range and passage. An answer with no citations, or with a citation to a source that doesn't exist, is flagged.
 - **Says "I don't know".** Two checks run before the LLM is called: the best passage must be similar enough (vector score), and the reranker must judge that it actually answers the question. The model is also told to refuse when the sources don't contain the answer.
 - **Click a citation, see the passage.** Every chunk stores the page rectangles it came from, so the PDF viewer opens the cited page with the passage highlighted.
+- **Compare documents.** Tick 2–4 documents and switch to *Compare*: each document is searched separately (so one can't crowd out the others), and the answer covers each document and then their similarities and differences, with citations. Documents that don't cover the question are flagged instead of guessed at.
 - **Measured, not assumed.** An evaluation set with retrieval and answer metrics (`npm run eval`) backs every change above with numbers.
 - **Free to index.** Embeddings run locally in Node, so indexing needs no API key.
 - **Pluggable LLM.** Claude (`claude-opus-5-5`) by default, or a free local model through Ollama.
@@ -87,6 +88,7 @@ npm run cli -- ask "What dataset did they evaluate on?" --show-context
 npm run cli -- chat                         # interactive
 npm run cli -- ask "..." --doc <id>         # restrict to one document
 npm run cli -- ask "..." --provider ollama
+npm run cli -- ask "How do their methods differ?" --compare --doc <id1> <id2>
 ```
 
 What an answer looks like (illustrative):
@@ -127,13 +129,13 @@ npm run dev        # http://localhost:5000, restarts on file changes
 | `GET` | `/api/documents/:id` | One document, including its `status` (`processing` → `ready` / `failed`) |
 | `GET` | `/api/documents/:id/file` | The original PDF, for the viewer |
 | `DELETE` | `/api/documents/:id` | Remove a document and its chunks |
-| `POST` | `/api/ask` | `{ question, documentIds?, topK?, provider? }`. Streams the answer as Server-Sent Events. |
+| `POST` | `/api/ask` | `{ question, documentIds?, topK?, provider?, mode? }`. Streams the answer as Server-Sent Events. `mode: "compare"` with 2–4 `documentIds` compares them. |
 
 `/api/ask` sends these events:
 
 | Event | Data |
 |---|---|
-| `sources` | The retrieved passages, numbered from 1, with file, pages, section, text and highlight regions |
+| `sources` | The retrieved passages, numbered from 1, with file, pages, section, text and highlight regions. In compare mode, also `groups`: which documents cover the question. |
 | `token` | `{ text }`: the next piece of the answer |
 | `done` | `{ text, refused, citations: [numbers], uncited, invalidCitations }` |
 | `error` | `{ message }` |

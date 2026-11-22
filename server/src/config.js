@@ -30,6 +30,7 @@ export const config = {
 
   topK: Number(env('TOP_K', '6')),
   searchMode: env('SEARCH_MODE', 'hybrid'), // hybrid | vector | keyword
+  comparePerDoc: Number(env('COMPARE_PER_DOC', '3')), // passages per document when comparing
   rerank: env('RERANK', 'true') === 'true',
   rerankModel: env('RERANK_MODEL', 'Xenova/ms-marco-MiniLM-L-6-v2'),
   rerankCandidates: Number(env('RERANK_CANDIDATES', '20')), // how many search results the reranker sees

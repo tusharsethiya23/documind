@@ -20,7 +20,16 @@ import { Document } from './models/Document.js';
 import { deleteDocument, indexPdf } from './services/indexer.js';
 import { getLLM, LLMError } from './services/llm.js';
 import { pageLabel } from './services/prompts.js';
-import { bestScore, finalize, generate, isAnswerable, REFUSAL, retrieve } from './services/qa.js';
+import {
+  bestScore,
+  finalize,
+  generate,
+  generateComparison,
+  isAnswerable,
+  REFUSAL,
+  retrieve,
+  retrieveForComparison,
+} from './services/qa.js';
 import { ensureSearchIndexes, searchIndexStatus } from './services/search.js';
 
 const scoreLabel = (h) => {
@@ -66,12 +75,22 @@ const withDB = (fn) => async (...args) => {
   }
 };
 
-async function answer(question, llm, { topK, documentIds, showContext }) {
-  const hits = await retrieve(question, { topK, documentIds });
+async function answer(question, llm, { topK, documentIds, showContext, compare }) {
+  let hits;
+  let groups = null;
+  if (compare) {
+    if (!documentIds || new Set(documentIds).size < 2) throw new Error('--compare needs at least two --doc ids (see `docs`).');
+    ({ hits, groups } = await retrieveForComparison(question, [...new Set(documentIds)]));
+    for (const g of groups) {
+      console.log(pc.dim(`${g.filename}: ${g.covered ? `${g.hits.length} passages` : 'does not cover this question'}`));
+    }
+  } else {
+    hits = await retrieve(question, { topK, documentIds });
+  }
   if (showContext) {
     hits.forEach((h, i) => console.log(pc.dim(`[${i + 1}] ${scoreLabel(h)} ${h.filename} ${pages(h)}`)));
   }
-  if (!isAnswerable(hits)) {
+  if (groups ? !groups.some((g) => g.covered) : !isAnswerable(hits)) {
     const best = hits.length ? bestScore(hits).toFixed(2) : 'n/a';
     console.log(`\n${REFUSAL}`);
     console.log(pc.dim(`(No passage was relevant enough: best score ${best} < ${config.minScore})`));
@@ -80,7 +99,7 @@ async function answer(question, llm, { topK, documentIds, showContext }) {
 
   process.stdout.write('\n');
   let text = '';
-  for await (const part of generate(question, hits, llm)) {
+  for await (const part of groups ? generateComparison(question, groups, llm) : generate(question, hits, llm)) {
     text += part;
     process.stdout.write(part);
   }
@@ -219,10 +238,11 @@ program
   .option('-k, --top-k <n>', 'number of passages', toInt)
   .option('-d, --doc <ids...>', 'limit to document id(s)')
   .option('--show-context', 'print retrieved passages and scores')
+  .option('-c, --compare', 'compare the --doc documents side by side')
   .action(
     withDB(async (question, opts) => {
       const llm = getLLM(opts.provider);
-      await answer(question, llm, { topK: opts.topK, documentIds: opts.doc, showContext: opts.showContext });
+      await answer(question, llm, { topK: opts.topK, documentIds: opts.doc, showContext: opts.showContext, compare: opts.compare });
     }),
   );
 

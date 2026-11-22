@@ -105,8 +105,15 @@ export default function Answer({ message, activeChunkId, onOpenSource }) {
   // While streaming, show sources as they get cited; afterwards, use the server's final list.
   const numbers = status === 'done' && message.citations?.length ? message.citations : citedNumbers(text)
 
+  const uncovered = message.groups?.filter((g) => !g.covered) ?? []
+
   return (
     <div className="answer">
+      {uncovered.length > 0 && (
+        <p className="small muted coverage">
+          No relevant passages in {uncovered.map((g) => g.filename).join(', ')}.
+        </p>
+      )}
       {text ? <AnswerText text={text} {...shared} /> : status === 'answering' && <p className="muted typing">Writing…</p>}
       {status === 'answering' && text && <span className="caret" aria-hidden />}
 

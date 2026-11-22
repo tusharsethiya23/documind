@@ -14,7 +14,8 @@ export function useChat() {
   const patch = (id, update) =>
     setMessages((list) => list.map((m) => (m.id === id ? { ...m, ...(typeof update === 'function' ? update(m) : update) } : m)))
 
-  const ask = useCallback(async (question, documentIds = []) => {
+  /** @param {'ask'|'compare'} mode  compare = per-document answer + comparison (2-4 documentIds) */
+  const ask = useCallback(async (question, documentIds = [], mode = 'ask') => {
     controllerRef.current?.abort()
     const controller = new AbortController()
     controllerRef.current = controller
@@ -23,15 +24,15 @@ export function useChat() {
     const answerId = nextId++
     setMessages((list) => [
       ...list,
-      { id: questionId, role: 'user', text: question, documentIds },
-      { id: answerId, role: 'assistant', status: 'searching', text: '', sources: [], citations: [] },
+      { id: questionId, role: 'user', text: question, documentIds, mode },
+      { id: answerId, role: 'assistant', status: 'searching', text: '', sources: [], citations: [], mode, groups: null },
     ])
 
     await askStream(
-      { question, documentIds },
+      { question, documentIds, mode },
       {
         signal: controller.signal,
-        onSources: (sources) => patch(answerId, { sources, status: 'answering' }),
+        onSources: (sources, groups) => patch(answerId, { sources, groups, status: 'answering' }),
         onToken: (text) => patch(answerId, (m) => ({ text: m.text + text })),
         onDone: (done) => patch(answerId, { ...done, status: 'done' }),
         onError: (error) => patch(answerId, { status: 'error', error }),

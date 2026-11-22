@@ -1,8 +1,11 @@
 /**
- * POST /api/ask  { question, documentIds?, provider?, topK? }
+ * POST /api/ask  { question, documentIds?, provider?, topK?, mode? }
+ *   mode "compare" (with 2-4 documentIds) searches each document separately
+ *   and asks for a per-document answer plus a comparison.
  *
  * Streams the answer as Server-Sent Events:
- *   event: sources  { sources: [...] }            retrieved passages, numbered from 1
+ *   event: sources  { sources: [...], groups? }   retrieved passages, numbered from 1
+ *                                                 (groups: per-document coverage when comparing)
  *   event: token    { text }                      answer text as it is generated
  *   event: done     { text, refused, citations, uncited, invalidCitations, reason? }
  *   event: error    { message }
@@ -12,7 +15,16 @@ import mongoose from 'mongoose';
 import { config } from '../config.js';
 import { HttpError } from '../middleware/errors.js';
 import { getLLM, LLMError } from '../services/llm.js';
-import { bestScore, finalize, generate, isAnswerable, REFUSAL, retrieve } from '../services/qa.js';
+import {
+  bestScore,
+  finalize,
+  generate,
+  generateComparison,
+  isAnswerable,
+  REFUSAL,
+  retrieve,
+  retrieveForComparison,
+} from '../services/qa.js';
 
 const router = Router();
 
@@ -43,11 +55,18 @@ function parseBody(body = {}) {
   const topK = body.topK === undefined ? config.topK : Number(body.topK);
   if (!Number.isInteger(topK) || topK < 1 || topK > 20) throw new HttpError(400, 'topK must be between 1 and 20.');
 
-  return { question, documentIds, topK, provider: body.provider };
+  const mode = body.mode ?? 'ask';
+  if (!['ask', 'compare'].includes(mode)) throw new HttpError(400, 'mode must be "ask" or "compare".');
+  const uniqueIds = [...new Set(documentIds)];
+  if (mode === 'compare' && (uniqueIds.length < 2 || uniqueIds.length > 4)) {
+    throw new HttpError(400, 'Pick 2 to 4 documents to compare.');
+  }
+
+  return { question, documentIds: mode === 'compare' ? uniqueIds : documentIds, topK, provider: body.provider, mode };
 }
 
 router.post('/', async (req, res) => {
-  const { question, documentIds, topK, provider } = parseBody(req.body);
+  const { question, documentIds, topK, provider, mode } = parseBody(req.body);
   let llm;
   try {
     llm = getLLM(provider);
@@ -70,10 +89,21 @@ router.post('/', async (req, res) => {
   });
 
   try {
-    const hits = await retrieve(question, { topK, documentIds });
-    send('sources', { sources: hits.map(toSource) });
+    let hits;
+    let groups = null;
+    if (mode === 'compare') {
+      ({ hits, groups } = await retrieveForComparison(question, documentIds));
+      send('sources', {
+        sources: hits.map(toSource),
+        groups: groups.map(({ documentId, filename, covered }) => ({ documentId, filename, covered })),
+      });
+    } else {
+      hits = await retrieve(question, { topK, documentIds });
+      send('sources', { sources: hits.map(toSource) });
+    }
 
-    if (!isAnswerable(hits)) {
+    const answerable = groups ? groups.some((g) => g.covered) : isAnswerable(hits);
+    if (!answerable) {
       send('done', {
         text: REFUSAL,
         refused: true,
@@ -87,7 +117,10 @@ router.post('/', async (req, res) => {
     }
 
     let text = '';
-    for await (const part of generate(question, hits, llm, { signal: controller.signal })) {
+    const stream = groups
+      ? generateComparison(question, groups, llm, { signal: controller.signal })
+      : generate(question, hits, llm, { signal: controller.signal });
+    for await (const part of stream) {
       if (controller.signal.aborted) break;
       text += part;
       send('token', { text: part });

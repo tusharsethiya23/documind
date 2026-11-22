@@ -32,8 +32,42 @@ export function formatSources(hits) {
     .join('\n\n');
 }
 
+export const COMPARE_SYSTEM_PROMPT = `You compare documents using only the numbered sources provided by the user. Sources are grouped by document.
+
+Rules:
+- Use only information stated in the sources. Do not use outside knowledge.
+- Cite every factual claim with its source number in square brackets, e.g. [2], at the end of the sentence.
+- Structure the answer as:
+  **<document name>**: what this document says about the question, with citations. One short paragraph per document, in the order given.
+  **Comparison**: the key similarities and differences, with citations.
+- If a document is marked as not covering the question, write only that it doesn't address it (no citation). Never guess what it would say.
+- In the comparison, only state facts that appear in the sources. If a detail is given for one document but not another, say it isn't stated rather than assuming it is the same.
+- Copy numbers, names and figures exactly. Be concise.`;
+
 // Repeated after the question: small models follow the instruction they read last.
-const CITE_REMINDER = 'Answer using only the sources above. End every sentence with the [n] of the source it comes from.';
+const CITE_REMINDER =
+  'Answer using only the sources above. End every sentence with the number of the source it comes from in square brackets, like [1].';
 
 export const buildUserPrompt = (question, hits) =>
   `<sources>\n${formatSources(hits)}\n</sources>\n\nQuestion: ${question}\n\n${CITE_REMINDER}`;
+
+/**
+ * Comparison prompt. `groups` = [{ filename, hits, covered }], and `hits` across
+ * all groups are numbered continuously so [n] maps to the flat sources list.
+ */
+export function buildComparePrompt(question, groups) {
+  let n = 0;
+  const blocks = groups.map(({ filename, hits, covered }) => {
+    if (!covered) {
+      return `<document name="${escapeAttr(filename)}" covers_question="no">\nNo passage in this document addresses the question.\n</document>`;
+    }
+    const sources = hits.map((hit) => {
+      n += 1;
+      const section = hit.section ? ` section="${escapeAttr(hit.section)}"` : '';
+      return `<source id="${n}"${section} pages="${pageLabel(hit)}">\n${stripReferenceMarkers(hit.text)}\n</source>`;
+    });
+    return `<document name="${escapeAttr(filename)}">\n${sources.join('\n\n')}\n</document>`;
+  });
+  const names = groups.map((g) => g.filename).join(', ');
+  return `<documents>\n${blocks.join('\n\n')}\n</documents>\n\nQuestion: ${question}\n\nCompare how these documents address the question: ${names}. ${CITE_REMINDER}`;
+}

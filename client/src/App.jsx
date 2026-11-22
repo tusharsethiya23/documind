@@ -46,7 +46,7 @@ export default function App() {
           readyCount={readyIds.size}
           selectedCount={activeSelectedIds.length}
           activeChunkId={visibleSource?.chunkId}
-          onAsk={(question) => chat.ask(question, activeSelectedIds)}
+          onAsk={(question, mode) => chat.ask(question, activeSelectedIds, mode)}
           onOpenSource={setActiveSource}
         />
         <Suspense fallback={<section className="panel viewer" aria-label="Source" />}>

@@ -116,7 +116,7 @@ export async function askStream(body, { onSources, onToken, onDone, onError, sig
         buffer = buffer.slice(boundary + 2)
         if (!message) continue
         const { event, data } = message
-        if (event === 'sources') onSources?.(data.sources)
+        if (event === 'sources') onSources?.(data.sources, data.groups ?? null)
         else if (event === 'token') onToken?.(data.text)
         else if (event === 'done') {
           finished = true

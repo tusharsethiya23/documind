@@ -854,3 +854,54 @@ button {
     max-height: 220px;
   }
 }
+
+/* ---------- Ask / Compare ---------- */
+
+.mode-switch {
+  display: inline-flex;
+  flex: none;
+  padding: 2px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg);
+}
+
+.mode-switch button {
+  padding: 3px 12px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.mode-switch button.on {
+  background: var(--accent);
+  color: #fff;
+}
+
+.mode-switch button:disabled {
+  opacity: 0.45;
+  cursor: help;
+}
+
+.composer-scope {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.question-tag {
+  display: block;
+  margin-bottom: 2px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  opacity: 0.8;
+}
+
+.coverage {
+  margin: 0 0 6px;
+}

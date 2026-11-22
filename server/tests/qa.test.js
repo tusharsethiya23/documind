@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { buildUserPrompt, stripReferenceMarkers } from '../src/services/prompts.js';
+import { buildComparePrompt, buildUserPrompt, stripReferenceMarkers } from '../src/services/prompts.js';
 import { finalize, isAnswerable, parseCitations, REFUSAL } from '../src/services/qa.js';
 
 const hit = (n, score = 0.9) => ({
@@ -74,6 +74,18 @@ test("strips the document's own reference markers from source text", () => {
   assert.equal(stripReferenceMarkers('Keep array[i] and [a] intact.'), 'Keep array[i] and [a] intact.');
   const prompt = buildUserPrompt('q', [{ ...hit(1), text: 'Label smoothing [36] of 0.1.' }]);
   assert.ok(prompt.includes('Label smoothing of 0.1.'));
+});
+
+test('comparison prompt groups sources by document with continuous numbering', () => {
+  const prompt = buildComparePrompt('Which GPUs?', [
+    { filename: 'a.pdf', covered: true, hits: [hit(1), hit(2)] },
+    { filename: 'b.pdf', covered: false, hits: [] },
+    { filename: 'c.pdf', covered: true, hits: [hit(3)] },
+  ]);
+  assert.match(prompt, /<document name="a.pdf">\n<source id="1"[\s\S]*<source id="2"/);
+  assert.match(prompt, /<document name="b.pdf" covers_question="no">/);
+  assert.match(prompt, /<document name="c.pdf">\n<source id="3"/);
+  assert.ok(prompt.includes('Compare how these documents address the question: a.pdf, b.pdf, c.pdf.'));
 });
 
 test('prompt numbers sources and includes pages and sections', () => {

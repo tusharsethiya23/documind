@@ -1,6 +1,7 @@
 /** Question answering: retrieve -> (refuse early | generate) -> attach citations. */
 import { config } from '../config.js';
-import { buildUserPrompt, REFUSAL, SYSTEM_PROMPT } from './prompts.js';
+import { Document } from '../models/Document.js';
+import { buildComparePrompt, buildUserPrompt, COMPARE_SYSTEM_PROMPT, REFUSAL, SYSTEM_PROMPT } from './prompts.js';
 import { rerank } from './reranker.js';
 import { searchChunks } from './search.js';
 
@@ -42,6 +43,31 @@ export function isAnswerable(hits, { minScore = config.minScore, rerankGate = co
 
 export async function* generate(question, hits, llm, { signal } = {}) {
   yield* llm.stream({ system: SYSTEM_PROMPT, user: buildUserPrompt(question, hits), signal });
+}
+
+/**
+ * Comparison retrieval: search each document on its own, so a long or
+ * keyword-dense document can't crowd the others out of the top-k.
+ * @returns {Promise<{groups: {documentId, filename, hits, covered}[], hits: object[]}>}
+ *   `hits` is the flat list (in group order) that [n] citations refer to.
+ */
+export async function retrieveForComparison(question, documentIds, { perDoc = config.comparePerDoc, ...options } = {}) {
+  const docs = await Document.find({ _id: { $in: documentIds }, status: 'ready' }).select('filename').lean();
+  const names = new Map(docs.map((d) => [String(d._id), d.filename]));
+  const groups = await Promise.all(
+    documentIds
+      .filter((id) => names.has(String(id)))
+      .map(async (id) => {
+        const hits = await retrieve(question, { ...options, topK: perDoc, documentIds: [id] });
+        const covered = isAnswerable(hits);
+        return { documentId: String(id), filename: names.get(String(id)), hits: covered ? hits : [], covered };
+      }),
+  );
+  return { groups, hits: groups.flatMap((g) => g.hits) };
+}
+
+export async function* generateComparison(question, groups, llm, { signal } = {}) {
+  yield* llm.stream({ system: COMPARE_SYSTEM_PROMPT, user: buildComparePrompt(question, groups), signal });
 }
 
 /** Extract [n] / [n, m] markers and map them to the retrieved passages. */

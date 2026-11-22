@@ -48,6 +48,17 @@ test('ask rejects invalid document ids, topK and providers', async () => {
   assert.match((await res.json()).error, /Unknown LLM provider/);
 });
 
+test('compare mode needs 2 to 4 distinct documents', async () => {
+  const id = (n) => `6b02773f41a146d981d5195${n}`;
+  for (const documentIds of [[], [id(1)], [id(1), id(1)], [id(1), id(2), id(3), id(4), id(5)]]) {
+    const res = await postJson('/ask', JSON.stringify({ question: 'Hi', mode: 'compare', documentIds }));
+    assert.equal(res.status, 400, `documentIds=${documentIds.length}`);
+    assert.equal((await res.json()).error, 'Pick 2 to 4 documents to compare.');
+  }
+  const res = await postJson('/ask', JSON.stringify({ question: 'Hi', mode: 'summarize' }));
+  assert.equal(res.status, 400);
+});
+
 test('malformed JSON gets a 400, not a 500', async () => {
   const res = await postJson('/ask', '{"question": ');
   assert.equal(res.status, 400);

@@ -20,7 +20,7 @@ export const config = {
   llmProvider: env('LLM_PROVIDER', 'claude'), // "claude" | "ollama"
   claudeModel: env('CLAUDE_MODEL', 'claude-opus-5-5'),
   claudeEffort: env('CLAUDE_EFFORT', 'medium'), // low | medium | high | xhigh | max
-  ollamaModel: env('OLLAMA_MODEL', 'llama3.1'),
+  ollamaModel: env('OLLAMA_MODEL', 'llama3.2'),
   ollamaHost: env('OLLAMA_HOST', 'http://localhost:11434'),
 
   // Local embedding model (runs in Node via transformers.js, no API key).
@@ -31,7 +31,7 @@ export const config = {
   topK: Number(env('TOP_K', '6')),
   // Atlas reports cosine similarity rescaled to 0..1 as (1 + cos) / 2.
   // Below this score the best passage is treated as "not in the documents".
-  minScore: Number(env('MIN_SCORE', '0.78')),
+  minScore: Number(env('MIN_SCORE', '0.72')),
 
   chunkChars: 1200,
   chunkOverlapChars: 200,

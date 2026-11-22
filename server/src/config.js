@@ -17,7 +17,8 @@ export const config = {
   readOnly: env('READ_ONLY', 'false') === 'true', // disable upload/delete
   askLimitPer10Min: Number(env('ASK_LIMIT_PER_10_MIN', '0')), // questions per IP per 10 min; 0 = no limit
   trustProxy: Number(env('TRUST_PROXY', '0')), // number of proxies in front (1 on most hosts)
-  clientDist: env('CLIENT_DIST', ''), // folder with the built React app to serve (production)
+  // Folder with the built React app to serve (production); relative paths resolve from server/.
+  clientDist: process.env.CLIENT_DIST ? path.resolve(serverRoot, process.env.CLIENT_DIST) : '',
 
   mongoUri: env('MONGODB_URI', ''),
   dbName: env('MONGODB_DB', 'documind'),

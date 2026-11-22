@@ -4,7 +4,13 @@ Ask questions about your PDFs (research papers, reports, company documents) and 
 
 Built with the **MERN** stack: MongoDB Atlas (documents, chunks and vectors in one database), Express, React and Node.
 
-> **Status: Week 3 of 4.** The pipeline, REST API, React app and evaluation are done. Multi-document comparison, Docker and deployment come next. See the [Roadmap](#roadmap).
+**Live demo: <https://documind-1htu.onrender.com>** (read-only, with two research papers loaded)
+
+> The demo runs on free tiers (Render, MongoDB Atlas, Groq), so the first visit after a quiet spell takes about a minute to wake up, and answers take 10–20 seconds. Running it locally is much faster.
+
+![Asking a question: the answer cites its source, and the PDF viewer opens the cited page with the passage highlighted](docs/screenshots/ask-with-citation.png)
+
+![Comparing two papers: each is searched separately, then the answer covers each one and compares them, with citations](docs/screenshots/compare.png)
 
 ## Results
 
@@ -146,6 +152,21 @@ docker run -p 7860:7860 --env-file server/.env -e READ_ONLY=true -e ASK_LIMIT_PE
 
 Demo settings: `READ_ONLY=true` turns off uploading and deleting (the UI shows a "Demo library" note instead), `ASK_LIMIT_PER_10_MIN` caps questions per visitor IP to protect a free LLM quota, and `TRUST_PROXY=1` (set by the Dockerfile) makes the limit see the visitor's IP behind the host's proxy.
 
+## Deploy your own (free)
+
+The live demo runs on [Render](https://render.com)'s free tier from [`render.yaml`](render.yaml):
+
+1. On Render: **New → Blueprint**, then pick your fork of this repo.
+2. Enter the two secrets it asks for: `MONGODB_URI` (Atlas, with Network Access allowing `0.0.0.0/0`) and `GROQ_API_KEY` (free at <https://console.groq.com/keys>).
+3. Index your PDFs from your machine with `npm run cli -- ingest` against the same database, because the demo is read-only.
+
+The free instance has 512 MB of RAM and a tenth of a CPU, so the blueprint tunes the local models to fit:
+- `RERANK_BATCH=2` scores two passages per model call, which cuts peak memory with identical results.
+- `ORT_THREADS=1` stops onnxruntime from starting a thread per host core it can see.
+- `ORT_LOW_MEMORY=true` frees buffers between calls.
+
+Peak memory drops from about 570 MB to about 300 MB, and retrieval accuracy is unchanged.
+
 ## REST API
 
 ```bash
@@ -228,4 +249,12 @@ server/
 - [x] **Week 1: core pipeline.** PDF parsing with page positions, section-aware chunking, local embeddings, Atlas Vector Search, cited answers, "I don't know" gate, CLI, tests.
 - [x] **Week 2: API and UI.** Express REST API (upload, documents, streaming answers over SSE) and a React (Vite) chat beside a PDF viewer that highlights the cited passage.
 - [x] **Week 3: quality.** Hybrid search, cross-encoder reranking, and an evaluation set with before/after metrics ([results](server/eval/RESULTS.md)).
-- [ ] **Week 4: ship.** Multi-document comparison, Docker, deployment, demo GIF.
+- [x] **Week 4: ship.** Multi-document comparison, Groq as a free hosted LLM, Docker (two-container dev setup and a single-container image), PDFs stored in MongoDB GridFS, read-only demo mode with rate limiting, and a [live deployment](https://documind-1htu.onrender.com) on Render's free tier.
+
+## Known limitations
+
+- **Compare mode can be too strict.** Each document must pass the relevance check on its own, so a document that does cover the question can be reported as "not covering it" when the wording drifts (for example "…and for how long?"). Normal questions don't have this problem.
+- **Small models cite less reliably.** With Llama 3.2 3B, compare mode sometimes skips the comparison or cites a source that doesn't exist (flagged in the UI). gpt-oss-120b on Groq does much better (see [Results](#results)).
+- **Scanned PDFs aren't supported.** There is no OCR, so image-only pages have no text to index.
+- **The evaluation set is small** (28 questions over 2 papers), and the rerank refusal threshold was chosen on that same set. See [the caveats](server/eval/RESULTS.md#caveats).
+- **Free-tier hosting is slow** and limited by Groq's free quota (about 8K tokens per minute), so the demo allows 20 questions per visitor per 10 minutes.

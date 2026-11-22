@@ -20,6 +20,7 @@ before(async () => {
   fs.writeFileSync(path.join(distDir, 'assets', 'app-abc123.js'), 'console.log(1)');
 
   Object.assign(config, { readOnly: true, askLimitPer10Min: 2, clientDist: distDir });
+  // (distDir is absolute; config.js resolves relative CLIENT_DIST values itself.)
   server = createApp().listen(0);
   await new Promise((resolve) => server.once('listening', resolve));
   base = `http://127.0.0.1:${server.address().port}`;

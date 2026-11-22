@@ -1,6 +1,10 @@
-/** pdf.js loader with a small per-document cache. */
-import { getDocument, GlobalWorkerOptions } from 'pdfjs-dist'
-import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
+/**
+ * pdf.js loader with a small per-document cache.
+ * Uses the legacy build: the modern one needs very recent browser features
+ * (e.g. Uint8Array.prototype.toHex) and fails on slightly older browsers.
+ */
+import { getDocument, GlobalWorkerOptions } from 'pdfjs-dist/legacy/build/pdf.mjs'
+import workerUrl from 'pdfjs-dist/legacy/build/pdf.worker.min.mjs?url'
 import { documentFileUrl } from './api.js'
 
 GlobalWorkerOptions.workerSrc = workerUrl

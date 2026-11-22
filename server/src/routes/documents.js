@@ -4,7 +4,7 @@ import multer from 'multer';
 import { config } from '../config.js';
 import { HttpError, validateId } from '../middleware/errors.js';
 import { Document } from '../models/Document.js';
-import { createDocument, deleteDocument, processDocument } from '../services/indexer.js';
+import { createDocument, deleteDocument, pdfPath, processDocument } from '../services/indexer.js';
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -57,12 +57,13 @@ router.get('/:id', validateId, async (req, res) => {
 router.get('/:id/file', validateId, async (req, res) => {
   const doc = await Document.findById(req.params.id).lean();
   if (!doc) throw new HttpError(404, 'Document not found.');
-  await fs.access(doc.storagePath).catch(() => {
+  const file = pdfPath(doc);
+  await fs.access(file).catch(() => {
     throw new HttpError(404, 'The PDF file is missing on the server.');
   });
   res.type('application/pdf');
   res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(doc.filename)}"`);
-  res.sendFile(doc.storagePath);
+  res.sendFile(file);
 });
 
 router.delete('/:id', validateId, async (req, res) => {

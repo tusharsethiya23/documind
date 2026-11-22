@@ -18,6 +18,12 @@ import { parsePdf, sha256 } from './pdfParser.js';
 const INSERT_BATCH = 100;
 
 /**
+ * Where a document's PDF lives. Derived from the content hash and the configured
+ * uploads folder (not a stored absolute path), so it works on any machine or container.
+ */
+export const pdfPath = (doc) => path.join(config.uploadsDir, `${doc.fileHash}.pdf`);
+
+/**
  * Store the PDF and create its record. Returns the existing record instead
  * when the same file is already indexed (unless `force`).
  * @returns {Promise<{document: object, skipped: boolean}>}
@@ -99,6 +105,6 @@ export async function deleteDocument(documentId) {
   if (!doc) return false;
   await Chunk.deleteMany({ documentId: doc._id });
   await Document.deleteOne({ _id: doc._id });
-  await fs.rm(doc.storagePath, { force: true });
+  await fs.rm(pdfPath(doc), { force: true });
   return true;
 }

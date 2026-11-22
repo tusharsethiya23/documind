@@ -1,0 +1,25 @@
+# DocuMind: docker compose up --build, then open http://localhost:8080
+# MongoDB is Atlas (Vector Search needs it), configured in server/.env.
+services:
+  server:
+    build: ./server
+    env_file: ./server/.env
+    environment:
+      # Reach Ollama running on the host machine (if LLM_PROVIDER=ollama).
+      OLLAMA_HOST: http://host.docker.internal:11434
+      CLIENT_ORIGIN: http://localhost:8080
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    volumes:
+      # Same folder the dev server uses, so uploaded PDFs are shared.
+      - ./server/uploads:/app/uploads
+    restart: unless-stopped
+
+  client:
+    build: ./client
+    ports:
+      - "8080:80"
+    depends_on:
+      server:
+        condition: service_healthy
+    restart: unless-stopped

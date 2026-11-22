@@ -114,6 +114,21 @@ cd client && npm install && npm run dev     # app on http://localhost:5173
 
 In development, Vite forwards `/api` requests to the API. To point a production build at a different API, set `VITE_API_URL` (for example `https://api.example.com/api`) before running `npm run build`.
 
+## Docker
+
+Run the whole app with one command (after creating `server/.env` as described in [Setup](#setup)):
+
+```bash
+docker compose up --build     # first build takes a few minutes
+```
+
+Open <http://localhost:8080>. Stop it with `docker compose down`.
+
+- **server**: the API on Node 22 (Debian slim). The embedding and reranking models are downloaded at build time, so the container starts ready and runs them offline. The image is about 1.2 GB: unused onnxruntime binaries for other operating systems and GPUs are stripped.
+- **client**: the built React app served by nginx, which also proxies `/api` with buffering off so answers stream token by token.
+- MongoDB stays on Atlas (Vector Search needs it). With `LLM_PROVIDER=ollama`, the container reaches Ollama on your machine through `host.docker.internal`.
+- Uploaded PDFs live in `server/uploads`, shared with the dev server.
+
 ## REST API
 
 ```bash

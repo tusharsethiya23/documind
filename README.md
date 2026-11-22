@@ -1,3 +1,14 @@
+---
+title: DocuMind
+emoji: 📄
+colorFrom: indigo
+colorTo: blue
+sdk: docker
+app_port: 7860
+pinned: false
+short_description: Ask PDFs questions, get answers with page citations
+---
+
 # DocuMind
 
 Ask questions about your PDFs (research papers, reports, company documents) and get answers that cite the exact page and passage they came from.

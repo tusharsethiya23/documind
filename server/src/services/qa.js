@@ -41,8 +41,19 @@ export function isAnswerable(hits, { minScore = config.minScore, rerankGate = co
   return true;
 }
 
+/**
+ * Some models (e.g. gpt-oss) cite with full-width brackets "【1】".
+ * Normalise to [1] so citations are recognised everywhere. Each bracket is one
+ * character, so converting chunk by chunk is safe.
+ */
+export const normalizeCitations = (text) => text.replace(/【/g, '[').replace(/】/g, ']');
+
+async function* normalized(stream) {
+  for await (const part of stream) yield normalizeCitations(part);
+}
+
 export async function* generate(question, hits, llm, { signal } = {}) {
-  yield* llm.stream({ system: SYSTEM_PROMPT, user: buildUserPrompt(question, hits), signal });
+  yield* normalized(llm.stream({ system: SYSTEM_PROMPT, user: buildUserPrompt(question, hits), signal }));
 }
 
 /**
@@ -67,7 +78,7 @@ export async function retrieveForComparison(question, documentIds, { perDoc = co
 }
 
 export async function* generateComparison(question, groups, llm, { signal } = {}) {
-  yield* llm.stream({ system: COMPARE_SYSTEM_PROMPT, user: buildComparePrompt(question, groups), signal });
+  yield* normalized(llm.stream({ system: COMPARE_SYSTEM_PROMPT, user: buildComparePrompt(question, groups), signal }));
 }
 
 /** Extract [n] / [n, m] markers and map them to the retrieved passages. */

@@ -117,7 +117,10 @@ class GroqLLM {
           ],
           stream: true,
           temperature: 0,
-          max_tokens: 2048,
+          max_tokens: 4096, // includes reasoning tokens on reasoning models
+          // gpt-oss models reason before answering; the reasoning streams in a
+          // separate field (ignored here) and this keeps it short.
+          ...(this.model.startsWith('openai/gpt-oss') && { reasoning_effort: config.groqReasoningEffort }),
         }),
         signal,
       });

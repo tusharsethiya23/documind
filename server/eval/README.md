@@ -18,6 +18,8 @@ Measures how well DocuMind finds the right passage and answers from it. Latest n
    npm run cli -- ingest ../papers
    npm run eval                    # retrieval + answers (uses the LLM in .env)
    npm run eval -- --retrieval-only  # retrieval only, no LLM, about a minute
+   npm run eval -- --provider groq --final-only  # another LLM, final setup only (earlier results are kept)
+   npm run eval -- --rescore         # re-grade saved answers after changing the grader
    ```
 
 `npm run eval` rewrites `RESULTS.md` and `results.json`.

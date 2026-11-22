@@ -13,12 +13,13 @@ Does the passage containing the answer come back, and how high is it ranked?
 | Hybrid (RRF) | 65% | 91% | 91% | 0.78 | 100% | 0% |
 | Hybrid + rerank | 83% | 96% | 96% | 0.89 | 100% | 80% |
 
-## Answers (ollama:llama3.2)
+## Answers
 
-| Setup | Correct | Correct + cited evidence | Citation precision | Refused unanswerable | Wrongly refused | Sec / question |
-|---|---|---|---|---|---|---|
-| Baseline: vector only | 83% | 74% | 80% | 100% | 4% | 2.0 |
-| Final: hybrid + rerank | 96% | 83% | 75% | 100% | 0% | 2.4 |
+| LLM | Setup | Correct | Correct + cited evidence | Citation precision | Refused unanswerable | Wrongly refused | Sec / question |
+|---|---|---|---|---|---|---|---|
+| ollama:llama3.2 | Baseline: vector only | 83% | 74% | 80% | 100% | 4% | 2.0 |
+| ollama:llama3.2 | Final: hybrid + rerank | 96% | 83% | 75% | 100% | 0% | 2.4 |
+| groq:openai/gpt-oss-120b | Final: hybrid + rerank | 96% | 96% | 87% | 100% | 0% | 6.4 |
 
 ## How it is measured
 
@@ -36,4 +37,4 @@ Questions are in [`questions.json`](questions.json); per-question outputs are in
 - Small set: 28 questions over 2 papers, so one question moves a percentage by about 4 points. Treat differences under ~10 points as noise.
 - Both answer setups use the same prompt; they differ only in retrieval (vector vs hybrid + rerank).
 - The rerank gate threshold (`RERANK_GATE=-4`) was picked by looking at this question set, so its refusal numbers may be optimistic on new documents.
-- One run with a local model at temperature 0. Numbers will shift with a different LLM.
+- One run per LLM at temperature 0. Hosted free-tier models may change behind the same name.

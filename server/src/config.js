@@ -23,7 +23,9 @@ export const config = {
   ollamaModel: env('OLLAMA_MODEL', 'llama3.2'),
   ollamaHost: env('OLLAMA_HOST', 'http://localhost:11434'),
   groqApiKey: env('GROQ_API_KEY', ''),
-  groqModel: env('GROQ_MODEL', 'llama-3.3-70b-versatile'),
+  groqModel: env('GROQ_MODEL', 'openai/gpt-oss-120b'),
+  // For reasoning models (gpt-oss): low keeps answers fast and within free-tier token limits.
+  groqReasoningEffort: env('GROQ_REASONING_EFFORT', 'low'),
   groqBaseUrl: env('GROQ_BASE_URL', 'https://api.groq.com/openai/v1'),
 
   // Local embedding model (runs in Node via transformers.js, no API key).

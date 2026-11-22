@@ -8,7 +8,7 @@
     "answerable": 23,
     "unanswerable": 5,
     "topK": 6,
-    "llm": "ollama:llama3.2",
+    "llm": "groq:openai/gpt-oss-120b",
     "embedModel": "Xenova/bge-small-en-v1.5",
     "rerankModel": "Xenova/ms-marco-MiniLM-L-6-v2"
   },
@@ -23,7 +23,7 @@
         "answerableKept": 1,
         "unanswerableRejected": 0
       },
-      "msPerQuery": 279,
+      "msPerQuery": 239,
       "misses": [
         "rag-retriever",
         "rag-nq-em",
@@ -37,7 +37,7 @@
       "recall": 0.9565217391304348,
       "mrr": 0.726086956521739,
       "gate": null,
-      "msPerQuery": 196,
+      "msPerQuery": 184,
       "misses": [
         "rag-mips"
       ]
@@ -52,7 +52,7 @@
         "answerableKept": 1,
         "unanswerableRejected": 0
       },
-      "msPerQuery": 274,
+      "msPerQuery": 213,
       "misses": [
         "rag-retriever",
         "rag-nq-em"
@@ -68,7 +68,7 @@
         "answerableKept": 1,
         "unanswerableRejected": 0.8
       },
-      "msPerQuery": 1070,
+      "msPerQuery": 962,
       "misses": [
         "rag-retriever"
       ]
@@ -364,7 +364,8 @@
           "text": "I don't know based on the provided documents.",
           "ms": 1741
         }
-      ]
+      ],
+      "llm": "ollama:llama3.2"
     },
     {
       "setup": "Final: hybrid + rerank",
@@ -654,6 +655,299 @@
           "citedRelevant": 0,
           "text": "",
           "ms": 1425
+        }
+      ],
+      "llm": "ollama:llama3.2"
+    },
+    {
+      "setup": "Final: hybrid + rerank",
+      "llm": "groq:openai/gpt-oss-120b",
+      "correct": 0.9565217391304348,
+      "citationPrecision": 0.8709677419354839,
+      "grounded": 0.9565217391304348,
+      "refusal": 1,
+      "falseRefusal": 0,
+      "secPerQuestion": 6.423392857142857,
+      "rows": [
+        {
+          "id": "att-bleu-de",
+          "answerable": true,
+          "refused": false,
+          "correct": true,
+          "cited": 2,
+          "citedRelevant": 2,
+          "text": "The Transformer achieves a BLEU score of 28.4 on the WMT 2014 English‑to‑German translation task[1][2].",
+          "ms": 1865
+        },
+        {
+          "id": "att-bleu-fr",
+          "answerable": true,
+          "refused": false,
+          "correct": true,
+          "cited": 2,
+          "citedRelevant": 1,
+          "text": "The Transformer’s big model achieved a BLEU score of **41.0** on the WMT 2014 English‑to‑French translation task[1].  \n\nIn the abstract the authors also report a BLEU score of **41.8** for their single‑model state‑of‑the‑art result on the same task[2].",
+          "ms": 1787
+        },
+        {
+          "id": "att-train-hw",
+          "answerable": true,
+          "refused": false,
+          "correct": true,
+          "cited": 2,
+          "citedRelevant": 2,
+          "text": "Training the big model took 3.5 days, and it was run on a single machine equipped with 8 NVIDIA P100 GPUs[1][2].",
+          "ms": 1509
+        },
+        {
+          "id": "att-label-smooth",
+          "answerable": true,
+          "refused": false,
+          "correct": true,
+          "cited": 1,
+          "citedRelevant": 1,
+          "text": "Label smoothing of value ϵₗₛ = 0.1 was used during training [1].",
+          "ms": 1199
+        },
+        {
+          "id": "att-warmup",
+          "answerable": true,
+          "refused": false,
+          "correct": true,
+          "cited": 1,
+          "citedRelevant": 1,
+          "text": "The learning‑rate schedule used 4000 warm‑up steps[1].",
+          "ms": 1342
+        },
+        {
+          "id": "att-ffn-dim",
+          "answerable": true,
+          "refused": false,
+          "correct": true,
+          "cited": 1,
+          "citedRelevant": 1,
+          "text": "The inner layer of the position‑wise feed‑forward network has dimensionality 2048 [1].",
+          "ms": 1310
+        },
+        {
+          "id": "att-data-size",
+          "answerable": true,
+          "refused": false,
+          "correct": true,
+          "cited": 1,
+          "citedRelevant": 1,
+          "text": "The English‑German training data contained about 4.5 million sentence pairs[1].",
+          "ms": 1604
+        },
+        {
+          "id": "att-bpe-vocab",
+          "answerable": true,
+          "refused": false,
+          "correct": true,
+          "cited": 1,
+          "citedRelevant": 1,
+          "text": "The shared source‑target vocabulary for English‑German contained about 37,000 tokens [1].",
+          "ms": 1829
+        },
+        {
+          "id": "att-base-time",
+          "answerable": true,
+          "refused": false,
+          "correct": true,
+          "cited": 1,
+          "citedRelevant": 1,
+          "text": "The base models were trained for 100,000 steps, which corresponded to about 12 hours of training time [1].",
+          "ms": 12752
+        },
+        {
+          "id": "att-adam-beta2",
+          "answerable": true,
+          "refused": false,
+          "correct": true,
+          "cited": 1,
+          "citedRelevant": 1,
+          "text": "The Adam optimizer was used with β₂ = 0.98[1].",
+          "ms": 3344
+        },
+        {
+          "id": "att-parsing-f1",
+          "answerable": true,
+          "refused": false,
+          "correct": true,
+          "cited": 1,
+          "citedRelevant": 1,
+          "text": "The 4‑layer Transformer achieved an F1 score of **91.3** on English constituency parsing when trained only on the WSJ data[1].",
+          "ms": 14724
+        },
+        {
+          "id": "att-layers",
+          "answerable": true,
+          "refused": false,
+          "correct": true,
+          "cited": 1,
+          "citedRelevant": 1,
+          "text": "The encoder stack is composed of N = 6 identical layers [1].",
+          "ms": 10730
+        },
+        {
+          "id": "att-heads",
+          "answerable": true,
+          "refused": false,
+          "correct": true,
+          "cited": 1,
+          "citedRelevant": 1,
+          "text": "The model employs eight parallel attention heads (h = 8)[1].",
+          "ms": 12564
+        },
+        {
+          "id": "rag-generator",
+          "answerable": true,
+          "refused": false,
+          "correct": true,
+          "cited": 1,
+          "citedRelevant": 1,
+          "text": "RAG uses a BART‑large model as its generator, which contributes 406 million trainable parameters to the system[1].",
+          "ms": 11681
+        },
+        {
+          "id": "rag-retriever",
+          "answerable": true,
+          "refused": false,
+          "correct": true,
+          "cited": 2,
+          "citedRelevant": 1,
+          "text": "RAG fetches documents with a dense‑passage retriever (DPR); its retriever component is initialized from DPR’s retriever that was trained with retrieval supervision on Natural Questions and TriviaQA[1]. The model’s architecture treats this component as a probabilistic retriever pη(z|x) that returns the top‑K passages for a given query[2].",
+          "ms": 12996
+        },
+        {
+          "id": "rag-index-size",
+          "answerable": true,
+          "refused": false,
+          "correct": true,
+          "cited": 1,
+          "citedRelevant": 1,
+          "text": "The Wikipedia articles were divided into disjoint 100‑word chunks, and this process yielded a total of 21 million documents for the index [1].",
+          "ms": 4545
+        },
+        {
+          "id": "rag-dump",
+          "answerable": true,
+          "refused": false,
+          "correct": true,
+          "cited": 1,
+          "citedRelevant": 1,
+          "text": "The main experiments use the December 2018 Wikipedia dump as the non‑parametric knowledge source[1].",
+          "ms": 5267
+        },
+        {
+          "id": "rag-faiss",
+          "answerable": true,
+          "refused": false,
+          "correct": true,
+          "cited": 1,
+          "citedRelevant": 1,
+          "text": "The MIPS index is built using the FAISS library[1].",
+          "ms": 5360
+        },
+        {
+          "id": "rag-nq-em",
+          "answerable": true,
+          "refused": false,
+          "correct": false,
+          "cited": 1,
+          "citedRelevant": 0,
+          "text": "RAG‑Sequence achieves an Exact Match score of **44.0** on the Natural Questions dataset[4].",
+          "ms": 15010
+        },
+        {
+          "id": "rag-gpus",
+          "answerable": true,
+          "refused": false,
+          "correct": true,
+          "cited": 1,
+          "citedRelevant": 1,
+          "text": "The RAG models were trained on eight 32 GB NVIDIA V100 GPUs[1].",
+          "ms": 11788
+        },
+        {
+          "id": "rag-fever",
+          "answerable": true,
+          "refused": false,
+          "correct": true,
+          "cited": 2,
+          "citedRelevant": 1,
+          "text": "RAG’s performance on FEVER is very close to state‑of‑the‑art models: for the 3‑way classification task it is within 4.3 percentage points of the best pipeline systems [1]. For the 2‑way classification task it trails the strongest RoBERTa baseline by only 2.7 percentage points [2].",
+          "ms": 15065
+        },
+        {
+          "id": "rag-mips",
+          "answerable": true,
+          "refused": false,
+          "correct": true,
+          "cited": 2,
+          "citedRelevant": 2,
+          "text": "MIPS stands for **Maximum Inner Product Search**[1][2]",
+          "ms": 7760
+        },
+        {
+          "id": "rag-hotswap",
+          "answerable": true,
+          "refused": false,
+          "correct": true,
+          "cited": 3,
+          "citedRelevant": 3,
+          "text": "RAG’s world knowledge can be refreshed simply by replacing its non‑parametric memory (the dense Wikipedia index) with a newer version, a process the authors call “index hot‑swapping.” Because the retrieval component accesses this external index at test time, swapping in an updated index updates the model’s knowledge without any additional parameter training or fine‑tuning of the generator [2][3][5].",
+          "ms": 12947
+        },
+        {
+          "id": "none-gpt4",
+          "answerable": false,
+          "refused": true,
+          "correct": false,
+          "cited": 0,
+          "citedRelevant": 0,
+          "text": "I don't know based on the provided documents.",
+          "ms": 6494
+        },
+        {
+          "id": "none-worldcup",
+          "answerable": false,
+          "refused": true,
+          "correct": false,
+          "cited": 0,
+          "citedRelevant": 0,
+          "text": "",
+          "ms": 1105
+        },
+        {
+          "id": "none-ibuprofen",
+          "answerable": false,
+          "refused": true,
+          "correct": false,
+          "cited": 0,
+          "citedRelevant": 0,
+          "text": "",
+          "ms": 1100
+        },
+        {
+          "id": "none-revenue",
+          "answerable": false,
+          "refused": true,
+          "correct": false,
+          "cited": 0,
+          "citedRelevant": 0,
+          "text": "",
+          "ms": 1123
+        },
+        {
+          "id": "none-diffusion",
+          "answerable": false,
+          "refused": true,
+          "correct": false,
+          "cited": 0,
+          "citedRelevant": 0,
+          "text": "",
+          "ms": 1055
         }
       ]
     }

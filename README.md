@@ -8,17 +8,25 @@ Built with the **MERN** stack: MongoDB Atlas (documents, chunks and vectors in o
 
 ## Results
 
-Measured on two arXiv papers ("Attention Is All You Need" and the original RAG paper) with 23 questions they answer and 5 they don't, using a free local model (Llama 3.2 3B via Ollama). Full report: [server/eval/RESULTS.md](server/eval/RESULTS.md).
+Measured on two arXiv papers ("Attention Is All You Need" and the original RAG paper) with 23 questions they answer and 5 they don't. Full report: [server/eval/RESULTS.md](server/eval/RESULTS.md).
+
+**Retrieval** (no LLM involved):
 
 | | Vector search only | Hybrid + rerank (final) |
 |---|---|---|
 | Right passage ranked first (Hit@1) | 61% | **83%** |
 | Right passage in top 3 (Hit@3) | 78% | **96%** |
 | Mean reciprocal rank | 0.70 | **0.89** |
-| Correct answers | 83% | **96%** |
-| Correct and citing a supporting passage | 74% | **83%** |
-| Unanswerable questions refused | 100% | **100%** |
-| Answerable questions wrongly refused | 4% | **0%** |
+
+**Answers**, with two free LLMs:
+
+| | Llama 3.2 3B (local), vector only | Llama 3.2 3B (local), final | gpt-oss-120b (Groq free tier), final |
+|---|---|---|---|
+| Correct answers | 83% | 96% | **96%** |
+| Correct and citing a supporting passage | 74% | 83% | **96%** |
+| Citation precision | 80% | 75% | **87%** |
+| Unanswerable questions refused | 100% | 100% | **100%** |
+| Answerable questions wrongly refused | 4% | 0% | **0%** |
 
 The evaluation also found and fixed real problems: papers' own reference markers ("FAISS [23]") being copied into answers as fake citations, rotated arXiv margin text being read as the title, and a relevance cutoff that never rejected an on-topic but unanswerable question. Small set, so treat differences under ~10 points as noise ([caveats](server/eval/RESULTS.md#caveats)).
 
@@ -46,7 +54,7 @@ Question ─┬─► $vectorSearch (meaning) ──┐
 - **Compare documents.** Tick 2–4 documents and switch to *Compare*: each document is searched separately (so one can't crowd out the others), and the answer covers each document and then their similarities and differences, with citations. Documents that don't cover the question are flagged instead of guessed at.
 - **Measured, not assumed.** An evaluation set with retrieval and answer metrics (`npm run eval`) backs every change above with numbers.
 - **Free to index.** Embeddings run locally in Node, so indexing needs no API key.
-- **Pluggable LLM.** Claude (`claude-opus-5-5`) by default, or a free local model through Ollama.
+- **Pluggable LLM.** Claude (`claude-opus-5-5`), Groq's free tier (`openai/gpt-oss-120b`, used for the online demo), or a free local model through Ollama.
 
 ## Setup
 

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { buildComparePrompt, buildUserPrompt, stripReferenceMarkers } from '../src/services/prompts.js';
-import { finalize, isAnswerable, parseCitations, REFUSAL } from '../src/services/qa.js';
+import { finalize, isAnswerable, normalizeCitations, parseCitations, REFUSAL } from '../src/services/qa.js';
 
 const hit = (n, score = 0.9) => ({
   chunkId: `c${n}`,
@@ -19,6 +19,12 @@ test('parses single, adjacent and grouped citations', () => {
   assert.deepEqual(citations.map((c) => c.number), [1, 2, 3]);
   assert.equal(citations[1].hit.chunkId, 'c2');
   assert.deepEqual(invalid, []);
+});
+
+test('normalises full-width citation brackets', () => {
+  assert.equal(normalizeCitations('ϵ = 0.1【1】 and 28.4【2】【3】.'), 'ϵ = 0.1[1] and 28.4[2][3].');
+  const { citations } = parseCitations(normalizeCitations('Value【2】.'), hits);
+  assert.deepEqual(citations.map((c) => c.number), [2]);
 });
 
 test('flags citations that point at non-existent sources', () => {

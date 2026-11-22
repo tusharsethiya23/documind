@@ -91,9 +91,16 @@ async function answer(question, llm, { topK, documentIds, showContext, compare }
     hits.forEach((h, i) => console.log(pc.dim(`[${i + 1}] ${scoreLabel(h)} ${h.filename} ${pages(h)}`)));
   }
   if (groups ? !groups.some((g) => g.covered) : !isAnswerable(hits)) {
-    const best = hits.length ? bestScore(hits).toFixed(2) : 'n/a';
     console.log(`\n${REFUSAL}`);
-    console.log(pc.dim(`(No passage was relevant enough: best score ${best} < ${config.minScore})`));
+    if (!groups && hits.length) {
+      const best = bestScore(hits);
+      const topRerank = hits[0].rerankScore;
+      const why =
+        best < config.minScore
+          ? `best similarity ${best.toFixed(2)} < ${config.minScore}`
+          : `best rerank score ${topRerank?.toFixed(1)} < ${config.rerankGate}`;
+      console.log(pc.dim(`(No passage was relevant enough: ${why})`));
+    }
     return;
   }
 

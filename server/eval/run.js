@@ -4,6 +4,10 @@
  *
  *   npm run eval                     retrieval + answer evaluation
  *   npm run eval -- --retrieval-only  skip the LLM (fast)
+ *   npm run eval -- --provider groq --final-only
+ *                                    answers with another LLM, final setup only
+ *                                    (results for other LLMs are kept in the report)
+ *   npm run eval -- --rescore         re-grade saved answers after changing the grader
  *
  * Retrieval (no LLM), per search setup:
  *   Hit@1 / Hit@3 / Recall@6  the evidence passage is in the top 1 / 3 / 6
@@ -23,11 +27,13 @@ import pc from 'picocolors';
 import { config } from '../src/config.js';
 import { connectDB, disconnectDB } from '../src/db.js';
 import { Document } from '../src/models/Document.js';
-import { getLLM } from '../src/services/llm.js';
+import { getLLM, LLMError } from '../src/services/llm.js';
 import { finalize, generate, isAnswerable, retrieve } from '../src/services/qa.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const args = new Set(process.argv.slice(2));
+const argv = process.argv.slice(2);
+const args = new Set(argv);
+const providerArg = argv.includes('--provider') ? argv[argv.indexOf('--provider') + 1] : undefined;
 const TOP_K = config.topK;
 
 const RETRIEVAL_SETUPS = [
@@ -43,7 +49,13 @@ const ANSWER_SETUPS = [
 
 // ---------- scoring helpers ----------
 
-const norm = (s) => s.toLowerCase().replace(/\s+/g, ' ').trim();
+// Also unify hyphen/dash variants: models sometimes write "100‑word" with U+2011.
+const norm = (s) =>
+  s
+    .toLowerCase()
+    .replace(/[‐-―−]/g, '-')
+    .replace(/\s+/g, ' ')
+    .trim();
 const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 /** A retrieved hit is relevant if it comes from the right document and contains an evidence phrase. */
@@ -105,6 +117,25 @@ async function evalRetrieval(questions, setup) {
   };
 }
 
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+/** Free-tier APIs rate-limit per minute: wait and retry instead of failing the run. */
+async function generateWithRetry(question, hits, llm, attempts = 6) {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      let text = '';
+      for await (const part of generate(question, hits, llm)) text += part;
+      return text;
+    } catch (err) {
+      const limited = err instanceof LLMError && /limit/i.test(err.message);
+      if (!limited || attempt >= attempts) throw err;
+      const wait = Number(err.message.match(/try again in ([\d.]+)s/)?.[1] ?? 20) + 1;
+      process.stdout.write(pc.dim(`  rate limited, waiting ${wait}s…\x1b[K\r`));
+      await sleep(wait * 1000);
+    }
+  }
+}
+
 async function evalAnswers(questions, setup, llm) {
   const rows = [];
   for (const [i, q] of questions.entries()) {
@@ -115,8 +146,7 @@ async function evalAnswers(questions, setup, llm) {
     if (!isAnswerable(hits)) {
       result = { refused: true, text: '', citations: [] };
     } else {
-      let text = '';
-      for await (const part of generate(q.question, hits, llm)) text += part;
+      const text = await generateWithRetry(q.question, hits, llm);
       result = finalize(q.question, text, hits);
     }
     const cited = result.citations.map((c) => c.hit);
@@ -138,6 +168,7 @@ async function evalAnswers(questions, setup, llm) {
   const citedTotal = ans.reduce((n, r) => n + r.cited, 0);
   return {
     setup: setup.name,
+    llm: llm.name,
     correct: ans.filter((r) => r.correct).length / ans.length,
     citationPrecision: citedTotal ? ans.reduce((n, r) => n + r.citedRelevant, 0) / citedTotal : 0,
     grounded: ans.filter((r) => r.correct && r.citedRelevant > 0).length / ans.length,
@@ -170,13 +201,13 @@ function markdown({ retrieval, answers, meta }) {
   if (answers?.length) {
     lines.push(
       '',
-      `## Answers (${meta.llm})`,
+      '## Answers',
       '',
-      '| Setup | Correct | Correct + cited evidence | Citation precision | Refused unanswerable | Wrongly refused | Sec / question |',
-      '|---|---|---|---|---|---|---|',
+      '| LLM | Setup | Correct | Correct + cited evidence | Citation precision | Refused unanswerable | Wrongly refused | Sec / question |',
+      '|---|---|---|---|---|---|---|---|',
       ...answers.map(
         (a) =>
-          `| ${a.setup} | ${pct(a.correct, 1)} | ${pct(a.grounded, 1)} | ${pct(a.citationPrecision, 1)} | ${pct(a.refusal, 1)} | ${pct(a.falseRefusal, 1)} | ${a.secPerQuestion.toFixed(1)} |`,
+          `| ${a.llm ?? meta.llm} | ${a.setup} | ${pct(a.correct, 1)} | ${pct(a.grounded, 1)} | ${pct(a.citationPrecision, 1)} | ${pct(a.refusal, 1)} | ${pct(a.falseRefusal, 1)} | ${a.secPerQuestion.toFixed(1)} |`,
       ),
     );
   }
@@ -198,7 +229,7 @@ function markdown({ retrieval, answers, meta }) {
     `- Small set: ${meta.answerable + meta.unanswerable} questions over 2 papers, so one question moves a percentage by about 4 points. Treat differences under ~10 points as noise.`,
     '- Both answer setups use the same prompt; they differ only in retrieval (vector vs hybrid + rerank).',
     '- The rerank gate threshold (`RERANK_GATE=-4`) was picked by looking at this question set, so its refusal numbers may be optimistic on new documents.',
-    '- One run with a local model at temperature 0. Numbers will shift with a different LLM.',
+    '- One run per LLM at temperature 0. Hosted free-tier models may change behind the same name.',
   );
   return lines.join('\n') + '\n';
 }
@@ -206,6 +237,27 @@ function markdown({ retrieval, answers, meta }) {
 // ---------- main ----------
 
 const set = JSON.parse(await fs.readFile(path.join(here, 'questions.json'), 'utf8'));
+
+if (args.has('--rescore')) {
+  // Re-grade saved answers with the current grader (no database or LLM calls).
+  // Citation counts were computed at run time and are kept as they are.
+  const saved = JSON.parse(await fs.readFile(path.join(here, 'results.json'), 'utf8'));
+  const byId = new Map(set.questions.map((q) => [q.id, q]));
+  for (const a of saved.answers) {
+    for (const row of a.rows) {
+      if (row.answerable) row.correct = !row.refused && answerMatches(row.text, byId.get(row.id).answer);
+    }
+    const ans = a.rows.filter((r) => r.answerable);
+    a.correct = ans.filter((r) => r.correct).length / ans.length;
+    a.grounded = ans.filter((r) => r.correct && r.citedRelevant > 0).length / ans.length;
+    console.log(`  ${(a.llm ?? saved.meta.llm).padEnd(26)} ${a.setup.padEnd(24)} correct ${pct(a.correct, 1)}  grounded ${pct(a.grounded, 1)}`);
+  }
+  await fs.writeFile(path.join(here, 'results.json'), JSON.stringify(saved, null, 2));
+  await fs.writeFile(path.join(here, 'RESULTS.md'), markdown(saved));
+  console.log(pc.green('Re-scored eval/results.json and eval/RESULTS.md'));
+  process.exit(0);
+}
+
 await connectDB();
 try {
   const present = new Set((await Document.find({ status: 'ready' }).select('filename').lean()).map((d) => d.filename));
@@ -225,10 +277,11 @@ try {
   let answers = [];
   let llmName = null;
   if (!args.has('--retrieval-only')) {
-    const llm = getLLM();
+    const llm = getLLM(providerArg);
     llmName = llm.name;
-    console.log(pc.bold(`\nAnswers with ${llm.name}: ${set.questions.length} questions × ${ANSWER_SETUPS.length} setups`));
-    for (const setup of ANSWER_SETUPS) {
+    const setups = args.has('--final-only') ? ANSWER_SETUPS.slice(-1) : ANSWER_SETUPS;
+    console.log(pc.bold(`\nAnswers with ${llm.name}: ${set.questions.length} questions × ${setups.length} setup(s)`));
+    for (const setup of setups) {
       const a = await evalAnswers(set.questions, setup, llm);
       answers.push(a);
       console.log(`  ${setup.name.padEnd(24)} correct ${pct(a.correct, 1).padStart(4)}  grounded ${pct(a.grounded, 1).padStart(4)}  cite-precision ${pct(a.citationPrecision, 1).padStart(4)}  refused-unanswerable ${pct(a.refusal, 1)}  wrongly-refused ${pct(a.falseRefusal, 1)}`);
@@ -245,6 +298,12 @@ try {
     embedModel: config.embedModel,
     rerankModel: config.rerankModel,
   };
+  // Keep earlier results from other LLMs/setups so the report can compare them.
+  const previous = await fs.readFile(path.join(here, 'results.json'), 'utf8').then(JSON.parse).catch(() => null);
+  const kept = (previous?.answers ?? [])
+    .map((a) => ({ ...a, llm: a.llm ?? previous.meta?.llm }))
+    .filter((a) => !answers.some((n) => n.llm === a.llm && n.setup === a.setup));
+  answers = [...kept, ...answers];
   await fs.writeFile(path.join(here, 'results.json'), JSON.stringify({ meta, retrieval, answers }, null, 2));
   if (answers.length || !args.has('--retrieval-only')) {
     await fs.writeFile(path.join(here, 'RESULTS.md'), markdown({ retrieval, answers, meta }));

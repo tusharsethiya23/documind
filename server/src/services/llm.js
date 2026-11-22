@@ -92,13 +92,87 @@ class OllamaLLM {
   }
 }
 
+/**
+ * Groq (free tier available) through its OpenAI-compatible chat completions API.
+ * Uses plain fetch and parses the Server-Sent Events stream itself.
+ */
+class GroqLLM {
+  constructor(model = config.groqModel) {
+    if (!config.groqApiKey) throw new LLMError('GROQ_API_KEY is not set. Get a free key at https://console.groq.com/keys');
+    this.model = model;
+    this.name = `groq:${model}`;
+  }
+
+  async *stream({ system, user, signal }) {
+    let res;
+    try {
+      res = await fetch(`${config.groqBaseUrl}/chat/completions`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${config.groqApiKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: this.model,
+          messages: [
+            { role: 'system', content: system },
+            { role: 'user', content: user },
+          ],
+          stream: true,
+          temperature: 0,
+          max_tokens: 2048,
+        }),
+        signal,
+      });
+    } catch (err) {
+      if (signal?.aborted) return;
+      throw new LLMError(`Could not reach Groq (${err.cause?.code ?? err.message}).`);
+    }
+
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      const detail = body.error?.message ?? res.statusText;
+      if (res.status === 401) throw new LLMError('Groq API key is invalid. Check GROQ_API_KEY.');
+      if (res.status === 429) {
+        const wait = res.headers.get('retry-after');
+        throw new LLMError(`Groq free-tier limit reached${wait ? `; try again in ${wait}s` : ''}. (${detail})`);
+      }
+      throw new LLMError(`Groq error ${res.status}: ${detail}`);
+    }
+
+    let buffer = '';
+    let finishReason = null;
+    try {
+      for await (const chunk of res.body.pipeThrough(new TextDecoderStream())) {
+        buffer += chunk;
+        let newline;
+        while ((newline = buffer.indexOf('\n')) !== -1) {
+          const line = buffer.slice(0, newline).trim();
+          buffer = buffer.slice(newline + 1);
+          if (!line.startsWith('data:')) continue;
+          const data = line.slice(5).trim();
+          if (data === '[DONE]') continue;
+          const event = JSON.parse(data);
+          if (event.error) throw new LLMError(`Groq error: ${event.error.message ?? 'stream failed'}`);
+          const choice = event.choices?.[0];
+          if (choice?.delta?.content) yield choice.delta.content;
+          if (choice?.finish_reason) finishReason = choice.finish_reason;
+        }
+      }
+    } catch (err) {
+      if (signal?.aborted) return;
+      throw err instanceof LLMError ? err : new LLMError(`Groq stream failed: ${err.message}`);
+    }
+    if (finishReason === 'length') yield '\n\n[Answer truncated: hit the output token limit.]';
+  }
+}
+
 export function getLLM(provider = config.llmProvider) {
   switch (provider.toLowerCase()) {
     case 'claude':
       return new ClaudeLLM();
     case 'ollama':
       return new OllamaLLM();
+    case 'groq':
+      return new GroqLLM();
     default:
-      throw new LLMError(`Unknown LLM provider "${provider}". Use "claude" or "ollama".`);
+      throw new LLMError(`Unknown LLM provider "${provider}". Use "claude", "groq" or "ollama".`);
   }
 }

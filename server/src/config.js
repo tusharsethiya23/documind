@@ -22,6 +22,9 @@ export const config = {
   claudeEffort: env('CLAUDE_EFFORT', 'medium'), // low | medium | high | xhigh | max
   ollamaModel: env('OLLAMA_MODEL', 'llama3.2'),
   ollamaHost: env('OLLAMA_HOST', 'http://localhost:11434'),
+  groqApiKey: env('GROQ_API_KEY', ''),
+  groqModel: env('GROQ_MODEL', 'llama-3.3-70b-versatile'),
+  groqBaseUrl: env('GROQ_BASE_URL', 'https://api.groq.com/openai/v1'),
 
   // Local embedding model (runs in Node via transformers.js, no API key).
   embedModel: env('EMBED_MODEL', 'Xenova/bge-small-en-v1.5'),

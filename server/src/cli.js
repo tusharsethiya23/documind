@@ -234,7 +234,7 @@ program
   .command('ask')
   .description('Answer a question with citations')
   .argument('<question>')
-  .option('-p, --provider <name>', 'claude | ollama (default from .env)')
+  .option('-p, --provider <name>', 'claude | groq | ollama (default from .env)')
   .option('-k, --top-k <n>', 'number of passages', toInt)
   .option('-d, --doc <ids...>', 'limit to document id(s)')
   .option('--show-context', 'print retrieved passages and scores')
@@ -249,7 +249,7 @@ program
 program
   .command('chat')
   .description('Interactive Q&A. Empty line to quit.')
-  .option('-p, --provider <name>', 'claude | ollama')
+  .option('-p, --provider <name>', 'claude | groq | ollama')
   .option('-d, --doc <ids...>', 'limit to document id(s)')
   .action(
     withDB(async (opts) => {

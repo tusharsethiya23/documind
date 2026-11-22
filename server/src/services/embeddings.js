@@ -4,12 +4,16 @@
  */
 import { env, pipeline } from '@huggingface/transformers';
 import { config } from '../config.js';
+import { ortSessionOptions } from './ortOptions.js';
 
 env.cacheDir = config.modelCacheDir;
 
 let extractorPromise;
 const getExtractor = () => {
-  extractorPromise ??= pipeline('feature-extraction', config.embedModel, { dtype: 'fp32' });
+  extractorPromise ??= pipeline('feature-extraction', config.embedModel, {
+    dtype: 'fp32',
+    session_options: ortSessionOptions(),
+  });
   return extractorPromise;
 };
 

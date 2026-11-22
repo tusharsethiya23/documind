@@ -47,6 +47,11 @@ export const config = {
   // Drop passages the reranker scores below this (clearly irrelevant ones score around -10).
   rerankMinScore: Number(env('RERANK_MIN_SCORE', '-5')),
   rerankBatch: Number(env('RERANK_BATCH', '2')), // passages per reranker call; lower = less memory
+
+  // onnxruntime (local models). Small hosts report many cores but allow a fraction
+  // of one: 1 thread avoids thrashing. Low-memory mode frees buffers between calls.
+  ortThreads: Number(env('ORT_THREADS', '0')), // 0 = onnxruntime default (one per core)
+  ortLowMemory: env('ORT_LOW_MEMORY', 'false') === 'true',
   // Say "I don't know" if even the best passage scores below this (see eval/RESULTS.md).
   rerankGate: Number(env('RERANK_GATE', '-4')),
   // Atlas reports cosine similarity rescaled to 0..1 as (1 + cos) / 2.

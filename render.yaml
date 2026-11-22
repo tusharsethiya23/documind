@@ -24,3 +24,9 @@ services:
         value: "1"
       - key: RERANK_BATCH
         value: "2"
+      # The free instance gets 0.1 CPU but reports the host's cores: one
+      # onnxruntime thread avoids thrashing, low-memory mode keeps peak ~300 MB.
+      - key: ORT_THREADS
+        value: "1"
+      - key: ORT_LOW_MEMORY
+        value: "true"

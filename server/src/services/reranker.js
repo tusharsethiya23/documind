@@ -8,6 +8,7 @@
  */
 import { AutoModelForSequenceClassification, AutoTokenizer, env } from '@huggingface/transformers';
 import { config } from '../config.js';
+import { ortSessionOptions } from './ortOptions.js';
 
 env.cacheDir = config.modelCacheDir;
 
@@ -15,7 +16,10 @@ let loading;
 const load = () => {
   loading ??= Promise.all([
     AutoTokenizer.from_pretrained(config.rerankModel),
-    AutoModelForSequenceClassification.from_pretrained(config.rerankModel, { dtype: 'q8' }),
+    AutoModelForSequenceClassification.from_pretrained(config.rerankModel, {
+      dtype: 'q8',
+      session_options: ortSessionOptions(),
+    }),
   ]).catch((err) => {
     loading = undefined; // allow a retry later
     throw err;

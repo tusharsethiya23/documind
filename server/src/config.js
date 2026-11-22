@@ -29,6 +29,7 @@ export const config = {
   queryPrefix: env('EMBED_QUERY_PREFIX', 'Represent this sentence for searching relevant passages: '),
 
   topK: Number(env('TOP_K', '6')),
+  searchMode: env('SEARCH_MODE', 'hybrid'), // hybrid | vector | keyword
   // Atlas reports cosine similarity rescaled to 0..1 as (1 + cos) / 2.
   // Below this score the best passage is treated as "not in the documents".
   minScore: Number(env('MIN_SCORE', '0.72')),
@@ -37,6 +38,7 @@ export const config = {
   chunkOverlapChars: 200,
 
   vectorIndexName: 'chunk_vector_index',
+  textIndexName: 'chunk_text_index',
   uploadsDir: path.join(serverRoot, 'uploads'),
   modelCacheDir: path.join(serverRoot, '.cache', 'models'),
 };

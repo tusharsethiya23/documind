@@ -1,7 +1,7 @@
 /** Question answering: retrieve -> (refuse early | generate) -> attach citations. */
 import { config } from '../config.js';
 import { buildUserPrompt, REFUSAL, SYSTEM_PROMPT } from './prompts.js';
-import { searchChunks } from './vectorSearch.js';
+import { searchChunks } from './search.js';
 
 export { REFUSAL };
 
@@ -9,8 +9,14 @@ const CITATION = /\[(\d+(?:\s*[,;]\s*\d+)*)\]/g;
 
 export const retrieve = (question, options = {}) => searchChunks(question, options);
 
-/** Retrieval gate: skip the LLM entirely when nothing relevant was found. */
-export const isAnswerable = (hits, minScore = config.minScore) => hits.length > 0 && hits[0].score >= minScore;
+/** Best vector similarity among the hits (keyword-only hits have score null). */
+export const bestScore = (hits) => Math.max(-1, ...hits.map((h) => h.score ?? -1));
+
+/**
+ * Retrieval gate: skip the LLM entirely when nothing relevant was found.
+ * Uses vector similarity, which is comparable across questions (BM25 scores aren't).
+ */
+export const isAnswerable = (hits, minScore = config.minScore) => hits.length > 0 && bestScore(hits) >= minScore;
 
 export async function* generate(question, hits, llm, { signal } = {}) {
   yield* llm.stream({ system: SYSTEM_PROMPT, user: buildUserPrompt(question, hits), signal });

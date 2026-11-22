@@ -12,7 +12,7 @@ import mongoose from 'mongoose';
 import { config } from '../config.js';
 import { HttpError } from '../middleware/errors.js';
 import { getLLM, LLMError } from '../services/llm.js';
-import { finalize, generate, isAnswerable, REFUSAL, retrieve } from '../services/qa.js';
+import { bestScore, finalize, generate, isAnswerable, REFUSAL, retrieve } from '../services/qa.js';
 
 const router = Router();
 
@@ -27,7 +27,8 @@ const toSource = (hit, i) => ({
   pageEnd: hit.pageEnd,
   regions: hit.regions,
   text: hit.text,
-  score: Number(hit.score.toFixed(4)),
+  score: hit.score == null ? null : Number(hit.score.toFixed(4)),
+  matchedBy: hit.matchedBy,
 });
 
 function parseBody(body = {}) {
@@ -76,7 +77,7 @@ router.post('/', async (req, res) => {
         text: REFUSAL,
         refused: true,
         reason: 'low_relevance',
-        bestScore: hits[0]?.score ?? null,
+        bestScore: hits.length ? bestScore(hits) : null,
         citations: [],
         uncited: false,
         invalidCitations: [],

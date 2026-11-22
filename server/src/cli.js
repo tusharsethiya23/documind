@@ -20,8 +20,13 @@ import { Document } from './models/Document.js';
 import { deleteDocument, indexPdf } from './services/indexer.js';
 import { getLLM, LLMError } from './services/llm.js';
 import { pageLabel } from './services/prompts.js';
-import { finalize, generate, isAnswerable, REFUSAL, retrieve } from './services/qa.js';
-import { ensureVectorIndex, vectorIndexStatus } from './services/vectorSearch.js';
+import { bestScore, finalize, generate, isAnswerable, REFUSAL, retrieve } from './services/qa.js';
+import { ensureSearchIndexes, searchIndexStatus } from './services/search.js';
+
+const scoreLabel = (h) => {
+  const vector = h.score == null ? '  —  ' : h.score.toFixed(3);
+  return `${vector} ${pc.dim(`(${h.matchedBy.join('+')})`)}`;
+};
 
 const pages = (h) => (h.pageStart === h.pageEnd ? `p. ${h.pageStart}` : `pp. ${pageLabel(h)}`);
 const snippet = (text, n = 160) => {
@@ -63,10 +68,10 @@ const withDB = (fn) => async (...args) => {
 async function answer(question, llm, { topK, documentIds, showContext }) {
   const hits = await retrieve(question, { topK, documentIds });
   if (showContext) {
-    hits.forEach((h, i) => console.log(pc.dim(`[${i + 1}] ${h.score.toFixed(3)} ${h.filename} ${pages(h)}`)));
+    hits.forEach((h, i) => console.log(pc.dim(`[${i + 1}] ${scoreLabel(h)} ${h.filename} ${pages(h)}`)));
   }
   if (!isAnswerable(hits)) {
-    const best = hits.length ? hits[0].score.toFixed(2) : 'n/a';
+    const best = hits.length ? bestScore(hits).toFixed(2) : 'n/a';
     console.log(`\n${REFUSAL}`);
     console.log(pc.dim(`(No passage was relevant enough: best score ${best} < ${config.minScore})`));
     return;
@@ -102,23 +107,30 @@ const program = new Command()
 
 program
   .command('setup')
-  .description('Create the Atlas Vector Search index (run once)')
+  .description('Create the Atlas search indexes (vector + keyword)')
   .action(
     withDB(async () => {
-      const { created, status } = await ensureVectorIndex();
-      console.log(created ? pc.green(`Created index "${config.vectorIndexName}".`) : `Index "${config.vectorIndexName}" already exists.`);
-      console.log(`Status: ${status}. It takes about a minute to become queryable; check with: npm run cli -- status`);
+      const created = await ensureSearchIndexes();
+      if (created.length) {
+        console.log(pc.green(`Created: ${created.join(', ')}.`));
+        console.log('New indexes take about a minute to become queryable; check with: npm run cli -- status');
+      } else {
+        console.log('All search indexes already exist.');
+      }
     }),
   );
 
 program
   .command('status')
-  .description('Show the vector index status and document count')
+  .description('Show search index status and document count')
   .action(
     withDB(async () => {
-      const index = await vectorIndexStatus();
-      console.log(`Vector index: ${index ? `${index.status}${index.queryable ? ' (queryable)' : ''}` : pc.yellow('missing. Run: npm run cli -- setup')}`);
-      console.log(`Documents: ${await Document.countDocuments({ status: 'ready' })}`);
+      const { vector, text } = await searchIndexStatus();
+      const show = (i) => (i ? `${i.status}${i.queryable ? ' (queryable)' : ''}` : pc.yellow('missing. Run: npm run cli -- setup'));
+      console.log(`Vector index:  ${show(vector)}`);
+      console.log(`Keyword index: ${show(text)}`);
+      console.log(`Search mode:   ${config.searchMode}`);
+      console.log(`Documents:     ${await Document.countDocuments({ status: 'ready' })}`);
     }),
   );
 
@@ -184,13 +196,14 @@ program
   .argument('<query>')
   .option('-k, --top-k <n>', 'number of passages', toInt)
   .option('-d, --doc <ids...>', 'limit to document id(s)')
+  .option('-m, --mode <mode>', 'hybrid | vector | keyword (default from .env)')
   .action(
     withDB(async (query, opts) => {
-      const hits = await retrieve(query, { topK: opts.topK, documentIds: opts.doc });
+      const hits = await retrieve(query, { topK: opts.topK, documentIds: opts.doc, mode: opts.mode });
       if (!hits.length) return console.log('No results. Is anything indexed, and is the index queryable (npm run cli -- status)?');
       hits.forEach((h, i) => {
         const section = h.section ? ` · ${h.section}` : '';
-        console.log(`${pc.cyan(`[${i + 1}]`)} ${h.score.toFixed(3)}  ${h.filename} ${pages(h)}${section}`);
+        console.log(`${pc.cyan(`[${i + 1}]`)} ${scoreLabel(h)}  ${h.filename} ${pages(h)}${section}`);
         console.log(pc.dim(`    ${snippet(h.text, 300)}\n`));
       });
     }),

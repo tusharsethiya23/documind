@@ -2,7 +2,7 @@ import { createApp } from './app.js';
 import { config } from './config.js';
 import { connectDB, disconnectDB } from './db.js';
 import { failInterruptedDocuments } from './services/indexer.js';
-import { ensureVectorIndex } from './services/vectorSearch.js';
+import { ensureSearchIndexes } from './services/search.js';
 
 try {
   await connectDB();
@@ -15,11 +15,11 @@ console.log('Connected to MongoDB');
 const interrupted = await failInterruptedDocuments();
 if (interrupted) console.log(`Marked ${interrupted} interrupted upload(s) as failed`);
 
-const index = await ensureVectorIndex().catch((err) => {
-  console.warn(`Could not check the vector index: ${err.message}`);
-  return null;
+const created = await ensureSearchIndexes().catch((err) => {
+  console.warn(`Could not check the search indexes: ${err.message}`);
+  return [];
 });
-if (index?.created) console.log('Created the vector search index; it becomes queryable in about a minute');
+if (created.length) console.log(`Created ${created.join(', ')}; they become queryable in about a minute`);
 
 const server = createApp().listen(config.port, () => {
   console.log(`DocuMind API on http://localhost:${config.port}`);

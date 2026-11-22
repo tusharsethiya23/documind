@@ -1,8 +1,10 @@
-import { useCallback, useMemo, useState } from 'react'
+import { lazy, Suspense, useCallback, useMemo, useState } from 'react'
 import ChatPanel from './components/ChatPanel.jsx'
 import DocumentPanel from './components/DocumentPanel.jsx'
 import Header from './components/Header.jsx'
-import SourcePanel from './components/SourcePanel.jsx'
+
+// pdf.js is large; load the viewer in its own chunk so the app opens fast.
+const PdfViewer = lazy(() => import('./components/PdfViewer.jsx'))
 import { useChat } from './hooks/useChat.js'
 import { useDocuments } from './hooks/useDocuments.js'
 
@@ -47,7 +49,9 @@ export default function App() {
           onAsk={(question) => chat.ask(question, activeSelectedIds)}
           onOpenSource={setActiveSource}
         />
-        <SourcePanel source={visibleSource} />
+        <Suspense fallback={<section className="panel viewer" aria-label="Source" />}>
+          <PdfViewer source={visibleSource} />
+        </Suspense>
       </main>
     </div>
   )

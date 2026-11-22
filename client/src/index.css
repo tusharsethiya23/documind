@@ -746,22 +746,78 @@ button {
   margin-top: 8px;
 }
 
-/* ---------- Source panel ---------- */
+/* ---------- PDF viewer ---------- */
 
-.source-detail h3 {
-  margin: 4px 0 2px;
-  font-size: 1rem;
-  overflow-wrap: anywhere;
+.viewer-header {
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 0.88rem;
+  color: var(--text);
 }
 
-.source-detail blockquote {
-  margin: 14px 0 16px;
-  padding: 12px 14px;
-  border-left: 3px solid var(--accent);
-  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
-  background: var(--surface);
-  white-space: pre-wrap;
-  font-size: 0.92rem;
+.viewer-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.viewer-nav {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+  font-weight: 400;
+}
+
+.viewer-nav .icon-btn {
+  font-size: 1.2rem;
+}
+
+.viewer-caption {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  padding: 0 16px 10px;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.viewer-caption span {
+  flex: 1;
+  min-width: 0;
+}
+
+.pdf-scroll {
+  padding-top: 2px;
+}
+
+.pdf-page {
+  position: relative;
+  margin: 0 auto;
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18);
+}
+
+.pdf-page canvas {
+  display: block;
+}
+
+.pdf-mark {
+  position: absolute;
+  border-radius: 3px;
+  background: var(--highlight);
+  outline: 2px solid rgba(234, 179, 8, 0.7);
+  mix-blend-mode: multiply;
+  pointer-events: none;
+  animation: mark-in 0.5s ease-out;
+}
+
+@keyframes mark-in {
+  from {
+    opacity: 0;
+  }
 }
 
 /* ---------- Responsive ---------- */

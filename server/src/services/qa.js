@@ -1,13 +1,27 @@
 /** Question answering: retrieve -> (refuse early | generate) -> attach citations. */
 import { config } from '../config.js';
 import { buildUserPrompt, REFUSAL, SYSTEM_PROMPT } from './prompts.js';
+import { rerank } from './reranker.js';
 import { searchChunks } from './search.js';
 
 export { REFUSAL };
 
 const CITATION = /\[(\d+(?:\s*[,;]\s*\d+)*)\]/g;
 
-export const retrieve = (question, options = {}) => searchChunks(question, options);
+/**
+ * Search, then (optionally) rerank.
+ * @param {{topK?: number, documentIds?: string[], mode?: string, rerank?: boolean}} options
+ */
+export async function retrieve(question, { topK = config.topK, rerank: useRerank = config.rerank, ...options } = {}) {
+  if (!useRerank) return searchChunks(question, { ...options, topK });
+  const candidates = await searchChunks(question, { ...options, topK: Math.max(topK, config.rerankCandidates) });
+  try {
+    return await rerank(question, candidates, topK);
+  } catch (err) {
+    console.warn(`Reranking failed, using search order (${err.message})`);
+    return candidates.slice(0, topK);
+  }
+}
 
 /** Best vector similarity among the hits (keyword-only hits have score null). */
 export const bestScore = (hits) => Math.max(-1, ...hits.map((h) => h.score ?? -1));

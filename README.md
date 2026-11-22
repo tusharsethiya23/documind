@@ -22,6 +22,7 @@ Question ─┬─► $vectorSearch (meaning) ──┐
 ```
 
 - **Hybrid search.** Vector search finds passages with the same *meaning*. Keyword search (BM25) finds *exact terms*: names, codes, numbers and acronyms that embeddings blur. The two ranked lists are merged with Reciprocal Rank Fusion, so passages found by both rank highest. Set `SEARCH_MODE=vector` or `keyword` to compare.
+- **Reranking.** A local cross-encoder (ms-marco MiniLM) reads the question and each of the top 20 passages together and reorders them by how well they answer it. Clearly irrelevant passages are dropped before the LLM sees them, because a small model tends to cite whatever is in its prompt. Set `RERANK=false` to compare.
 
 - **Grounded answers.** The model sees numbered sources and must cite one for every claim. Citations are parsed and mapped back to a file, page range and passage. An answer with no citations, or with a citation to a source that doesn't exist, is flagged.
 - **Says "I don't know".** If even the best match is weak, the LLM is never called. The model is also told to refuse when the sources don't contain the answer.
@@ -164,6 +165,7 @@ server/
       embeddings.js         local bge-small embeddings
       indexer.js            the full ingestion pipeline
       search.js             vector + keyword search, RRF merge, index setup
+      reranker.js           cross-encoder reranking
       prompts.js            system prompt, numbered sources
       llm.js                Claude / Ollama streaming
       qa.js                 retrieve → gate → generate → citations
@@ -174,5 +176,5 @@ server/
 
 - [x] **Week 1: core pipeline.** PDF parsing with page positions, section-aware chunking, local embeddings, Atlas Vector Search, cited answers, "I don't know" gate, CLI, tests.
 - [x] **Week 2: API and UI.** Express REST API (upload, documents, streaming answers over SSE) and a React (Vite) chat beside a PDF viewer that highlights the cited passage.
-- [ ] **Week 3: quality.** ~~Hybrid search (Atlas full-text + vector)~~ ✓, reranking, and an evaluation set with before/after metrics.
+- [ ] **Week 3: quality.** ~~Hybrid search~~ ✓, ~~reranking~~ ✓, and an evaluation set with before/after metrics.
 - [ ] **Week 4: ship.** Multi-document comparison, Docker, deployment, demo GIF.

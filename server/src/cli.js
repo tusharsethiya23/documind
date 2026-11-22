@@ -25,7 +25,8 @@ import { ensureSearchIndexes, searchIndexStatus } from './services/search.js';
 
 const scoreLabel = (h) => {
   const vector = h.score == null ? '  —  ' : h.score.toFixed(3);
-  return `${vector} ${pc.dim(`(${h.matchedBy.join('+')})`)}`;
+  const rerank = h.rerankScore == null ? '' : ` rerank ${h.rerankScore.toFixed(1)}`;
+  return `${vector}${rerank} ${pc.dim(`(${h.matchedBy.join('+')})`)}`;
 };
 
 const pages = (h) => (h.pageStart === h.pageEnd ? `p. ${h.pageStart}` : `pp. ${pageLabel(h)}`);
@@ -197,9 +198,10 @@ program
   .option('-k, --top-k <n>', 'number of passages', toInt)
   .option('-d, --doc <ids...>', 'limit to document id(s)')
   .option('-m, --mode <mode>', 'hybrid | vector | keyword (default from .env)')
+  .option('--no-rerank', 'skip the cross-encoder reranker')
   .action(
     withDB(async (query, opts) => {
-      const hits = await retrieve(query, { topK: opts.topK, documentIds: opts.doc, mode: opts.mode });
+      const hits = await retrieve(query, { topK: opts.topK, documentIds: opts.doc, mode: opts.mode, rerank: opts.rerank });
       if (!hits.length) return console.log('No results. Is anything indexed, and is the index queryable (npm run cli -- status)?');
       hits.forEach((h, i) => {
         const section = h.section ? ` · ${h.section}` : '';

@@ -29,6 +29,7 @@ const toSource = (hit, i) => ({
   text: hit.text,
   score: hit.score == null ? null : Number(hit.score.toFixed(4)),
   matchedBy: hit.matchedBy,
+  rerankScore: hit.rerankScore == null ? null : Number(hit.rerankScore.toFixed(3)),
 });
 
 function parseBody(body = {}) {

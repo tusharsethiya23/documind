@@ -28,9 +28,17 @@ export const bestScore = (hits) => Math.max(-1, ...hits.map((h) => h.score ?? -1
 
 /**
  * Retrieval gate: skip the LLM entirely when nothing relevant was found.
- * Uses vector similarity, which is comparable across questions (BM25 scores aren't).
+ * 1. Vector similarity must clear `minScore` (comparable across questions; BM25 scores aren't).
+ * 2. If the hits were reranked, the best cross-encoder score must clear `rerankGate`.
+ *    The reranker judges "does this passage answer the question", which catches
+ *    on-topic-but-unanswerable questions that vector similarity lets through.
  */
-export const isAnswerable = (hits, minScore = config.minScore) => hits.length > 0 && bestScore(hits) >= minScore;
+export function isAnswerable(hits, { minScore = config.minScore, rerankGate = config.rerankGate } = {}) {
+  if (!hits.length || bestScore(hits) < minScore) return false;
+  const reranked = hits.filter((h) => h.rerankScore != null);
+  if (reranked.length && Math.max(...reranked.map((h) => h.rerankScore)) < rerankGate) return false;
+  return true;
+}
 
 export async function* generate(question, hits, llm, { signal } = {}) {
   yield* llm.stream({ system: SYSTEM_PROMPT, user: buildUserPrompt(question, hits), signal });
@@ -55,7 +63,9 @@ export function parseCitations(text, hits) {
 export function finalize(question, rawText, hits) {
   const text = rawText.trim();
   const refusalCore = REFUSAL.toLowerCase().replace(/\.$/, '');
-  if (text.toLowerCase().includes(refusalCore) && text.length < REFUSAL.length + 40) {
+  const lower = text.toLowerCase();
+  // Refusal = starts with the phrase ("I don't know... The sources don't mention X") or is just the phrase.
+  if (lower.startsWith(refusalCore) || (lower.includes(refusalCore) && text.length < REFUSAL.length + 40)) {
     return { question, text: REFUSAL, hits, citations: [], refused: true, uncited: false, invalidCitations: [] };
   }
   const { citations, invalid } = parseCitations(text, hits);

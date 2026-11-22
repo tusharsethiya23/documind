@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { buildUserPrompt } from '../src/services/prompts.js';
+import { buildUserPrompt, stripReferenceMarkers } from '../src/services/prompts.js';
 import { finalize, isAnswerable, parseCitations, REFUSAL } from '../src/services/qa.js';
 
 const hit = (n, score = 0.9) => ({
@@ -38,6 +38,24 @@ test('recognises the refusal phrase', () => {
   assert.equal(result.text, REFUSAL);
 });
 
+test('recognises a refusal followed by an explanation', () => {
+  const result = finalize('q', `${REFUSAL} The sources do not mention GPT-4.`, hits);
+  assert.equal(result.refused, true);
+});
+
+test('does not treat an answer that merely mentions the phrase late as a refusal', () => {
+  const long = `The paper reports 28.4 BLEU [1]. For the other metric, ${REFUSAL.toLowerCase()} Beyond that, see [2].`;
+  assert.equal(finalize('q', long, hits).refused, false);
+});
+
+test('rerank gate refuses when even the best passage scores too low', () => {
+  const reranked = (score, rerankScore) => ({ score, rerankScore });
+  assert.equal(isAnswerable([reranked(0.8, -4.2), reranked(0.79, -9)], { minScore: 0.72, rerankGate: -4 }), false);
+  assert.equal(isAnswerable([reranked(0.8, -2.7)], { minScore: 0.72, rerankGate: -4 }), true);
+  // No rerank scores (reranking off): only the vector gate applies.
+  assert.equal(isAnswerable([{ score: 0.8 }], { minScore: 0.72, rerankGate: -4 }), true);
+});
+
 test('marks answers without citations as uncited', () => {
   const result = finalize('q', 'Paris is the capital of France.', hits);
   assert.equal(result.refused, false);
@@ -45,14 +63,22 @@ test('marks answers without citations as uncited', () => {
 });
 
 test('retrieval gate refuses when the best score is too low', () => {
-  assert.equal(isAnswerable([], 0.78), false);
-  assert.equal(isAnswerable([hit(1, 0.6)], 0.78), false);
-  assert.equal(isAnswerable([hit(1, 0.85)], 0.78), true);
+  assert.equal(isAnswerable([], { minScore: 0.78 }), false);
+  assert.equal(isAnswerable([hit(1, 0.6)], { minScore: 0.78 }), false);
+  assert.equal(isAnswerable([hit(1, 0.85)], { minScore: 0.78 }), true);
+});
+
+test("strips the document's own reference markers from source text", () => {
+  assert.equal(stripReferenceMarkers('We use FAISS [23] with HNSW [37, 38].'), 'We use FAISS with HNSW.');
+  assert.equal(stripReferenceMarkers('Prior work [4–6] and [12; 14] showed this.'), 'Prior work and showed this.');
+  assert.equal(stripReferenceMarkers('Keep array[i] and [a] intact.'), 'Keep array[i] and [a] intact.');
+  const prompt = buildUserPrompt('q', [{ ...hit(1), text: 'Label smoothing [36] of 0.1.' }]);
+  assert.ok(prompt.includes('Label smoothing of 0.1.'));
 });
 
 test('prompt numbers sources and includes pages and sections', () => {
   const prompt = buildUserPrompt('What?', hits.slice(0, 2));
   assert.match(prompt, /<source id="1" document="paper.pdf" section="Intro" pages="1">\nPassage 1\n<\/source>/);
   assert.match(prompt, /<source id="2" document="paper.pdf" pages="2">/);
-  assert.ok(prompt.endsWith('Question: What?'));
+  assert.ok(prompt.includes('Question: What?\n\nAnswer using only the sources above.'));
 });

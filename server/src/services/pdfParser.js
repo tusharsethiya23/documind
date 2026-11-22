@@ -34,6 +34,8 @@ function buildLines(items, viewport) {
   let line = null;
   for (const item of items) {
     if (!('str' in item)) continue; // marked-content markers
+    // Skip rotated text such as arXiv's sideways margin stamp; it is not body text.
+    if (Math.abs(item.transform[1]) > 1e-3 || Math.abs(item.transform[2]) > 1e-3) continue;
     const tx = Util.transform(viewport.transform, item.transform);
     const size = Math.hypot(tx[2], tx[3]);
     const x = tx[4];

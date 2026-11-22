@@ -1,4 +1,4 @@
-import { PDFDocument, StandardFonts } from 'pdf-lib';
+import { degrees, PDFDocument, StandardFonts } from 'pdf-lib';
 
 const LOREM =
   'Retrieval augmented generation grounds a language model in external documents. ' +
@@ -48,6 +48,8 @@ export async function makeSamplePdf() {
     page.drawText(String(i + 1), { x: 300, y: 30, size: 9, font });
     let y = 720;
     if (i === 0) {
+      // Sideways margin stamp like arXiv's, in a bigger font than the title.
+      page.drawText('arXiv:0000.00000v1 [cs.CL]', { x: 30, y: 200, size: 24, font, rotate: degrees(90) });
       page.drawText('A Study of Retrieval for Question Answering', { x: 72, y, size: 20, font: bold });
       y -= 50;
     }

@@ -36,6 +36,6 @@ test('RRF score is the sum of 1/(k + rank)', () => {
 test('the relevance gate uses the best vector score, ignoring keyword-only hits', () => {
   const hits = [{ score: null }, { score: 0.74 }, { score: 0.6 }];
   assert.equal(bestScore(hits), 0.74);
-  assert.equal(isAnswerable(hits, 0.72), true);
-  assert.equal(isAnswerable([{ score: null }], 0.72), false);
+  assert.equal(isAnswerable(hits, { minScore: 0.72 }), true);
+  assert.equal(isAnswerable([{ score: null }], { minScore: 0.72 }), false);
 });

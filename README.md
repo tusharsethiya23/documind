@@ -4,7 +4,23 @@ Ask questions about your PDFs (research papers, reports, company documents) and 
 
 Built with the **MERN** stack: MongoDB Atlas (documents, chunks and vectors in one database), Express, React and Node.
 
-> **Status: Week 1 of 4.** The ingestion and question-answering pipeline is done and usable from the command line. The REST API and the React UI come next. See the [Roadmap](#roadmap).
+> **Status: Week 3 of 4.** The pipeline, REST API, React app and evaluation are done. Multi-document comparison, Docker and deployment come next. See the [Roadmap](#roadmap).
+
+## Results
+
+Measured on two arXiv papers ("Attention Is All You Need" and the original RAG paper) with 23 questions they answer and 5 they don't, using a free local model (Llama 3.2 3B via Ollama). Full report: [server/eval/RESULTS.md](server/eval/RESULTS.md).
+
+| | Vector search only | Hybrid + rerank (final) |
+|---|---|---|
+| Right passage ranked first (Hit@1) | 61% | **83%** |
+| Right passage in top 3 (Hit@3) | 78% | **96%** |
+| Mean reciprocal rank | 0.70 | **0.89** |
+| Correct answers | 83% | **96%** |
+| Correct and citing a supporting passage | 74% | **83%** |
+| Unanswerable questions refused | 100% | **100%** |
+| Answerable questions wrongly refused | 4% | **0%** |
+
+The evaluation also found and fixed real problems: papers' own reference markers ("FAISS [23]") being copied into answers as fake citations, rotated arXiv margin text being read as the title, and a relevance cutoff that never rejected an on-topic but unanswerable question. Small set, so treat differences under ~10 points as noise ([caveats](server/eval/RESULTS.md#caveats)).
 
 ## How it works
 
@@ -16,17 +32,18 @@ PDF ─► pdfjs-dist ─► text blocks ─► section-aware ─► local embed
                                            a heading)
 
 Question ─┬─► $vectorSearch (meaning) ──┐
-          │                             ├─► RRF merge ─► relevance gate ─► LLM (Claude / Ollama) ─► answer
-          └─► $search BM25 (exact terms)┘   (top-k)      (too weak? say      forced to cite [n]      + sources
-                                                          "I don't know")                            (file, page, quote)
+          │                             ├─► RRF merge ─► rerank ─► relevance gate ─► LLM (Claude / Ollama) ─► answer
+          └─► $search BM25 (exact terms)┘   (top 20)    (top 6,   (too weak? say      forced to cite [n]      + sources
+                                                         cross-    "I don't know")                            (file, page, quote)
+                                                         encoder)
 ```
 
 - **Hybrid search.** Vector search finds passages with the same *meaning*. Keyword search (BM25) finds *exact terms*: names, codes, numbers and acronyms that embeddings blur. The two ranked lists are merged with Reciprocal Rank Fusion, so passages found by both rank highest. Set `SEARCH_MODE=vector` or `keyword` to compare.
 - **Reranking.** A local cross-encoder (ms-marco MiniLM) reads the question and each of the top 20 passages together and reorders them by how well they answer it. Clearly irrelevant passages are dropped before the LLM sees them, because a small model tends to cite whatever is in its prompt. Set `RERANK=false` to compare.
-
 - **Grounded answers.** The model sees numbered sources and must cite one for every claim. Citations are parsed and mapped back to a file, page range and passage. An answer with no citations, or with a citation to a source that doesn't exist, is flagged.
-- **Says "I don't know".** If even the best match is weak, the LLM is never called. The model is also told to refuse when the sources don't contain the answer.
-- **Highlight-ready.** Every chunk stores the page rectangles it came from, so the UI can highlight the exact passage in the PDF.
+- **Says "I don't know".** Two checks run before the LLM is called: the best passage must be similar enough (vector score), and the reranker must judge that it actually answers the question. The model is also told to refuse when the sources don't contain the answer.
+- **Click a citation, see the passage.** Every chunk stores the page rectangles it came from, so the PDF viewer opens the cited page with the passage highlighted.
+- **Measured, not assumed.** An evaluation set with retrieval and answer metrics (`npm run eval`) backs every change above with numbers.
 - **Free to index.** Embeddings run locally in Node, so indexing needs no API key.
 - **Pluggable LLM.** Claude (`claude-opus-5-5`) by default, or a free local model through Ollama.
 
@@ -176,5 +193,5 @@ server/
 
 - [x] **Week 1: core pipeline.** PDF parsing with page positions, section-aware chunking, local embeddings, Atlas Vector Search, cited answers, "I don't know" gate, CLI, tests.
 - [x] **Week 2: API and UI.** Express REST API (upload, documents, streaming answers over SSE) and a React (Vite) chat beside a PDF viewer that highlights the cited passage.
-- [ ] **Week 3: quality.** ~~Hybrid search~~ ✓, ~~reranking~~ ✓, and an evaluation set with before/after metrics.
+- [x] **Week 3: quality.** Hybrid search, cross-encoder reranking, and an evaluation set with before/after metrics ([results](server/eval/RESULTS.md)).
 - [ ] **Week 4: ship.** Multi-document comparison, Docker, deployment, demo GIF.

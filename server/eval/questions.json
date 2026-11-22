@@ -1,0 +1,320 @@
+{
+  "description": "DocuMind evaluation set over two arXiv papers: 'Attention Is All You Need' (1706.03762v7) and 'Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks' (2005.11401v4). `evidence` is a phrase (or list of alternative phrases) copied from the paper: a retrieved chunk counts as relevant if it contains one. `answer` lists groups of acceptable phrasings; a correct answer contains one phrasing from every group. Questions with `answerable: false` are not covered by either paper.",
+  "documents": [
+    "attention-vaswani-2017.pdf",
+    "rag-lewis-2020.pdf"
+  ],
+  "questions": [
+    {
+      "id": "att-bleu-de",
+      "doc": "attention-vaswani-2017.pdf",
+      "question": "What BLEU score does the Transformer achieve on the WMT 2014 English-to-German task?",
+      "evidence": "28.4 BLEU on the WMT 2014",
+      "answer": [
+        [
+          "28.4"
+        ]
+      ]
+    },
+    {
+      "id": "att-bleu-fr",
+      "doc": "attention-vaswani-2017.pdf",
+      "question": "What BLEU score did the model reach on English-to-French translation?",
+      "evidence": "BLEU score of 41.8",
+      "answer": [
+        [
+          "41.8"
+        ]
+      ]
+    },
+    {
+      "id": "att-train-hw",
+      "doc": "attention-vaswani-2017.pdf",
+      "question": "How long did training the big model take, and on what hardware?",
+      "evidence": "3.5 days on 8 P100 GPUs",
+      "answer": [
+        [
+          "3.5 days"
+        ],
+        [
+          "P100"
+        ]
+      ]
+    },
+    {
+      "id": "att-label-smooth",
+      "doc": "attention-vaswani-2017.pdf",
+      "question": "What value of label smoothing was used during training?",
+      "evidence": "label smoothing of value",
+      "answer": [
+        [
+          "0.1"
+        ]
+      ]
+    },
+    {
+      "id": "att-warmup",
+      "doc": "attention-vaswani-2017.pdf",
+      "question": "How many warmup steps did the learning rate schedule use?",
+      "evidence": "warmup_steps = 4000",
+      "answer": [
+        [
+          "4000",
+          "4,000"
+        ]
+      ]
+    },
+    {
+      "id": "att-ffn-dim",
+      "doc": "attention-vaswani-2017.pdf",
+      "question": "What is the dimensionality of the inner layer of the position-wise feed-forward network?",
+      "evidence": "inner-layer has dimensionality",
+      "answer": [
+        [
+          "2048",
+          "2,048"
+        ]
+      ]
+    },
+    {
+      "id": "att-data-size",
+      "doc": "attention-vaswani-2017.pdf",
+      "question": "How many sentence pairs were in the English-German training data?",
+      "evidence": "4.5 million sentence pairs",
+      "answer": [
+        [
+          "4.5 million"
+        ]
+      ]
+    },
+    {
+      "id": "att-bpe-vocab",
+      "doc": "attention-vaswani-2017.pdf",
+      "question": "How large was the shared source-target vocabulary for English-German?",
+      "evidence": "about 37000 tokens",
+      "answer": [
+        [
+          "37000",
+          "37,000"
+        ]
+      ]
+    },
+    {
+      "id": "att-base-time",
+      "doc": "attention-vaswani-2017.pdf",
+      "question": "How long were the base models trained for?",
+      "evidence": "100,000 steps or 12 hours",
+      "answer": [
+        [
+          "12 hours",
+          "100,000 steps",
+          "100K steps"
+        ]
+      ]
+    },
+    {
+      "id": "att-adam-beta2",
+      "doc": "attention-vaswani-2017.pdf",
+      "question": "Which value of beta2 was used for the Adam optimizer?",
+      "evidence": "0.98 and ϵ",
+      "answer": [
+        [
+          "0.98"
+        ]
+      ]
+    },
+    {
+      "id": "att-parsing-f1",
+      "doc": "attention-vaswani-2017.pdf",
+      "question": "What F1 did the 4-layer Transformer get on English constituency parsing when trained on WSJ only?",
+      "evidence": "WSJ only, discriminative 91.3",
+      "answer": [
+        [
+          "91.3"
+        ]
+      ]
+    },
+    {
+      "id": "att-layers",
+      "doc": "attention-vaswani-2017.pdf",
+      "question": "How many identical layers make up the encoder stack?",
+      "evidence": "N = 6 identical layers",
+      "answer": [
+        [
+          "6",
+          "six"
+        ]
+      ]
+    },
+    {
+      "id": "att-heads",
+      "doc": "attention-vaswani-2017.pdf",
+      "question": "How many parallel attention heads does the model use?",
+      "evidence": "h = 8 parallel attention layers",
+      "answer": [
+        [
+          "8",
+          "eight"
+        ]
+      ]
+    },
+    {
+      "id": "rag-generator",
+      "doc": "rag-lewis-2020.pdf",
+      "question": "Which model is used as RAG's generator, and how many parameters does it have?",
+      "evidence": [
+        "We use BART-large",
+        "trainable parameters from BART-large"
+      ],
+      "answer": [
+        [
+          "BART"
+        ],
+        [
+          "400M",
+          "406M",
+          "400 million",
+          "406 million"
+        ]
+      ]
+    },
+    {
+      "id": "rag-retriever",
+      "doc": "rag-lewis-2020.pdf",
+      "question": "What retriever does RAG use to fetch documents?",
+      "evidence": [
+        "Dense Passage Retriever",
+        "Retriever: DPR"
+      ],
+      "answer": [
+        [
+          "Dense Passage Retriever",
+          "DPR"
+        ]
+      ]
+    },
+    {
+      "id": "rag-index-size",
+      "doc": "rag-lewis-2020.pdf",
+      "question": "How were Wikipedia articles split for the document index, and how many documents did that produce?",
+      "evidence": "100-word chunks, to make a total of 21M documents",
+      "answer": [
+        [
+          "100-word",
+          "100 word"
+        ],
+        [
+          "21M",
+          "21 million"
+        ]
+      ]
+    },
+    {
+      "id": "rag-dump",
+      "doc": "rag-lewis-2020.pdf",
+      "question": "Which Wikipedia dump is used as the knowledge source in the main experiments?",
+      "evidence": "we use the December 2018 dump",
+      "answer": [
+        [
+          "December 2018",
+          "Dec 2018",
+          "Dec. 2018"
+        ]
+      ]
+    },
+    {
+      "id": "rag-faiss",
+      "doc": "rag-lewis-2020.pdf",
+      "question": "Which library is used to build the MIPS index?",
+      "evidence": "MIPS index using FAISS",
+      "answer": [
+        [
+          "FAISS"
+        ]
+      ]
+    },
+    {
+      "id": "rag-nq-em",
+      "doc": "rag-lewis-2020.pdf",
+      "question": "What exact match score does RAG-Sequence get on Natural Questions?",
+      "evidence": "below the 44.5 that RAG-Sequence achieves",
+      "answer": [
+        [
+          "44.5"
+        ]
+      ]
+    },
+    {
+      "id": "rag-gpus",
+      "doc": "rag-lewis-2020.pdf",
+      "question": "What GPUs were used to train the RAG models?",
+      "evidence": "32GB NVIDIA V100 GPUs",
+      "answer": [
+        [
+          "V100"
+        ]
+      ]
+    },
+    {
+      "id": "rag-fever",
+      "doc": "rag-lewis-2020.pdf",
+      "question": "How close does RAG come to the state of the art on FEVER fact verification?",
+      "evidence": "within 4.3% of state-of-the-art",
+      "answer": [
+        [
+          "4.3"
+        ]
+      ]
+    },
+    {
+      "id": "rag-mips",
+      "doc": "rag-lewis-2020.pdf",
+      "question": "What does MIPS stand for?",
+      "evidence": "Maximum Inner Product Search (MIPS)",
+      "answer": [
+        [
+          "Maximum Inner Product Search"
+        ]
+      ]
+    },
+    {
+      "id": "rag-hotswap",
+      "doc": "rag-lewis-2020.pdf",
+      "question": "How can RAG's world knowledge be updated without retraining the model?",
+      "evidence": "hot-swapped to update the model without requiring any retraining",
+      "answer": [
+        [
+          "index",
+          "hot-swap",
+          "swap",
+          "replac"
+        ]
+      ]
+    },
+    {
+      "id": "none-gpt4",
+      "answerable": false,
+      "question": "How many parameters does GPT-4 have?"
+    },
+    {
+      "id": "none-worldcup",
+      "answerable": false,
+      "question": "Who won the 2022 FIFA World Cup?"
+    },
+    {
+      "id": "none-ibuprofen",
+      "answerable": false,
+      "question": "What is the recommended adult dose of ibuprofen?"
+    },
+    {
+      "id": "none-revenue",
+      "answerable": false,
+      "question": "What was Apple's revenue in 2023?"
+    },
+    {
+      "id": "none-diffusion",
+      "answerable": false,
+      "question": "Which dataset was Stable Diffusion trained on?"
+    }
+  ]
+}

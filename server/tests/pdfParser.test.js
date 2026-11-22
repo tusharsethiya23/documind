@@ -19,6 +19,10 @@ test('uses the largest text on page 1 as the title', () => {
   assert.equal(parsed.title, 'A Study of Retrieval for Question Answering');
 });
 
+test('ignores sideways text like the arXiv margin stamp', () => {
+  assert.ok(!parsed.blocks.some((b) => b.text.includes('arXiv')));
+});
+
 test('detects numbered section headings', () => {
   const headings = parsed.blocks.filter((b) => b.isHeading).map((b) => b.text);
   for (const h of ['1 Introduction', '2 Methods', '3 Results']) assert.ok(headings.includes(h), `missing ${h}`);
